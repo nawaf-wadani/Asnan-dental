@@ -1,66 +1,78 @@
-# Asnan Dental — Inventory Ordering
+# Asnan Dental — Supply Ordering
 
-A dental clinic supply ordering application built with TanStack Start and deployed on Netlify. Assistants browse a categorized catalog of 200+ dental supplies, manage quantities, add special requests with photos, and generate PDF order documents.
+Internal web app for a dental clinic. Assistants sign in, browse a database-backed
+catalog of ~200 supplies, place orders, and manage on-hand inventory. Placing an
+order generates a branded PDF that is **emailed to the clinic and downloaded** in
+one step. Admins manage users, the catalog, all orders, and an audit log.
 
-## Features
+## Stack
 
-- **Categorized catalog** — 7 procedure categories (Diagnostics, Restorative, Endodontics, Anesthesia, Surgical, Impression, Infection Control) with 200+ items
-- **Smart search** — fuzzy, typo-tolerant search across all items and manufacturers
-- **Quantity management** — per-item quantity controls with undo support
-- **Special requests** — free-text items with required photo uploads (camera or file), auto-compressed to keep storage lean
-- **PDF generation** — branded order documents via print dialog or HTML download
-- **Order history** — last 20 orders saved locally with one-tap reorder
-- **Favorites** — star items for quick access across sessions
-- **Frequently ordered** — tracks item frequency and surfaces top picks
-- **Smart pairing suggestions** — prompts complementary items when adding common supplies
-- **Dark mode** — full light/dark theme with persistent preference
-- **Email & clipboard** — plain-text order export for email or paste
-- **Gap analysis** — recommended additions not in the current catalog
-- **Client-side persistence** — all data stored in localStorage, no server required
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | TanStack Start |
-| Frontend | React 19, TanStack Router v1 |
+| Layer | Tech |
+|---|---|
+| Framework | TanStack Start (React 19, TanStack Router v1) |
 | Build | Vite 7 |
-| Styling | Tailwind CSS 4 + inline styles for theming |
-| Icons | Lucide React |
-| Font | Manrope (Google Fonts) |
-| Language | TypeScript 5.7 |
-| Deployment | Netlify |
+| Styling | Tailwind CSS 4 + inline brand theming |
+| API | Netlify Functions (v2) |
+| Database | Netlify DB (Postgres) via `@netlify/database` |
+| Auth | Per-user accounts, scrypt hashes, signed HttpOnly JWT cookie (`jose`) |
+| PDF | `pdfkit` (server-side) |
+| Email | `nodemailer` over Google Workspace SMTP |
+| Hosting | Netlify (Git-connected builds) |
 
-## Getting Started
+## Layout
+
+```
+shared/            code shared by the browser and the functions (no React/DOM)
+  brand.ts         brand palette (single source of truth)
+  catalog.ts       starter catalog + pairings + gap-analysis list
+  rct.ts           WaveOne / endo option lists
+  types.ts         API DTOs
+
+netlify/
+  database/migrations/   SQL migrations, applied automatically on deploy
+  functions/             one file per REST resource (auth, catalog, inventory,
+                         orders, endo-orders, users, stats)
+  lib/                   db, auth, validation (zod), pdf, email, audit, rate limit
+
+src/
+  lib/             api client, auth context, storage, formatting, photo compression
+  components/
+    ui/            primitives + toast
+    order/         the ordering flow (intro -> browse -> review -> done)
+    inventory/     stock management
+    rct/           WaveOne endo order
+    admin/         admin console (dashboard, orders, catalog, users, audit)
+  routes/          file-based routes, each gated by <RequireAuth>
+```
+
+## Environment variables
+
+See [`.env.example`](.env.example). Required in production:
+`AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (bootstrap only),
+`SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `ORDER_EMAIL_TO`.
+
+## Local development
+
+Requires Node 20+.
 
 ```bash
 npm install
-npm run dev      # Start dev server
-npm run build    # Production build
+cp .env.example .env      # fill in the blanks
+npm run dev               # http://localhost:3000
+npm run typecheck         # tsc --noEmit
 ```
 
-## Project Structure
+`npm run dev` (via `@netlify/vite-plugin-tanstack-start`) emulates Netlify DB and
+Functions locally.
 
-```
-src/
-├── components/
-│   └── AsnanDental.tsx    # Main application component (catalog, UI, storage, PDF)
-├── routes/
-│   ├── __root.tsx         # Root HTML shell with metadata
-│   └── index.tsx          # Home route rendering AsnanDental
-├── router.tsx             # TanStack Router configuration
-└── styles.css             # Tailwind + Manrope font + utility styles
-```
+## Deploy
 
-## Data Storage
+Push to the connected GitHub repo. Netlify runs `npm run build`, applies pending
+migrations, bundles the functions, and publishes. See `DEPLOY.md`.
 
-All persistence is client-side via `localStorage` under the `asnan:` namespace:
+## First run
 
-| Key | Purpose |
-|-----|---------|
-| `asnan:current-draft` | Auto-saved in-progress order |
-| `asnan:order-history` | Last 20 completed orders |
-| `asnan:favorites` | Starred item IDs |
-| `asnan:saved-assistants` | Recent assistant names |
-| `asnan:item-frequency` | Per-item order frequency counts |
-| `asnan:settings` | User preferences (dark mode) |
+On the first successful login with `ADMIN_EMAIL` / `ADMIN_PASSWORD` the admin
+account is created and the catalog is seeded from `shared/catalog.ts`. From then
+on the database is the source of truth and the catalog is edited in **Admin →
+Catalog**.

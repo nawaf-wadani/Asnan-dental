@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss" source("../");
 
+:root {
+  color-scheme: light dark;
+}
+
 body {
   margin: 0;
   font-family: 'Manrope', system-ui, -apple-system, sans-serif;
@@ -13,6 +17,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -20,153 +29,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   overflow: hidden;
 }
 
-::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-/* ===== GLASSMORPHISM ===== */
-
-.glass {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.glass-dark {
-  background: rgba(28, 28, 30, 0.6);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glass-strong {
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.glass-strong-dark {
-  background: rgba(28, 28, 30, 0.78);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* ===== SOFT SHADOWS ===== */
-
-.shadow-apple {
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.06);
-}
-
-.shadow-apple-md {
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.05),
-    0 12px 40px rgba(0, 0, 0, 0.08);
-}
-
-.shadow-apple-lg {
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.06),
-    0 24px 60px rgba(0, 0, 0, 0.12);
-}
-
-.shadow-apple-dark {
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-.shadow-apple-dark-md {
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 12px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* ===== SMOOTH TRANSITIONS ===== */
-
 .transition-apple {
-  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.transition-bounce {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* ===== HOVER EFFECTS ===== */
-
-.hover-lift {
-  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
-              box-shadow 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-}
-
-.hover-lift:active {
-  transform: translateY(0px) scale(0.98);
-}
-
-.hover-scale {
-  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .hover-scale:hover {
   transform: scale(1.02);
 }
-
 .hover-scale:active {
   transform: scale(0.97);
 }
 
-/* ===== PULSE GLOW FOR CTAs ===== */
-
-@keyframes subtleGlow {
-  0%, 100% { box-shadow: 0 4px 16px rgba(137, 123, 185, 0.15); }
-  50% { box-shadow: 0 4px 24px rgba(137, 123, 185, 0.3); }
-}
-
-.glow-pulse {
-  animation: subtleGlow 3s ease-in-out infinite;
-}
-
-/* ===== MODAL BACKDROP ===== */
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out forwards;
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .animate-slide-up {
-  animation: slideUp 0.35s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  animation: slideUp 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 
-/* ===== GRADIENT MESH BACKGROUNDS ===== */
-
-.mesh-gradient-light {
-  background-image:
-    radial-gradient(at 20% 20%, rgba(137, 123, 185, 0.08) 0%, transparent 50%),
-    radial-gradient(at 80% 80%, rgba(88, 86, 214, 0.06) 0%, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(52, 199, 89, 0.04) 0%, transparent 50%);
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-.mesh-gradient-dark {
-  background-image:
-    radial-gradient(at 20% 20%, rgba(169, 155, 212, 0.12) 0%, transparent 50%),
-    radial-gradient(at 80% 80%, rgba(94, 92, 230, 0.08) 0%, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(48, 209, 88, 0.05) 0%, transparent 50%);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
