@@ -41,6 +41,7 @@ export const catalogCreateSchema = z.object({
   photoUrl: photo,
   onHand: z.number().int().min(0).max(100000).optional(),
   reorderThreshold: z.number().int().min(0).max(100000).optional(),
+  active: z.boolean().optional(),
 });
 
 export const catalogUpdateSchema = catalogCreateSchema.partial().refine(

@@ -52,8 +52,18 @@ export const catalogApi = {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
-  retire: (sku: string) =>
+  /** Archive (soft delete): hides the item from ordering + inventory, keeps its data. */
+  archive: (sku: string) =>
     request<{ ok: true }>(`/api/catalog/${encodeURIComponent(sku)}`, { method: "DELETE" }),
+  /** Bring an archived item back. */
+  restore: (sku: string) =>
+    request<{ item: CatalogItem }>(`/api/catalog/${encodeURIComponent(sku)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ active: true }),
+    }),
+  /** Permanent delete. Past orders keep their own copy of the item. */
+  remove: (sku: string) =>
+    request<{ ok: true }>(`/api/catalog/${encodeURIComponent(sku)}?hard=1`, { method: "DELETE" }),
 };
 
 // ---- inventory ----
@@ -68,9 +78,11 @@ export interface InventoryRow {
   photoUrl: string | null;
   onHand: number;
   reorderThreshold: number;
+  active?: boolean;
 }
 export const inventoryApi = {
-  list: () => request<{ items: InventoryRow[] }>("/api/inventory"),
+  list: (includeArchived = false) =>
+    request<{ items: InventoryRow[] }>(`/api/inventory${includeArchived ? "?includeArchived=1" : ""}`),
   adjust: (input: { sku: string; onHand?: number; reorderThreshold?: number; delta?: number }) =>
     request<{ item: CatalogItem }>("/api/inventory", { method: "PATCH", body: JSON.stringify(input) }),
 };

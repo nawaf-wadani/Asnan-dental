@@ -89,6 +89,7 @@ const CATALOG_COLUMN: Record<keyof CatalogUpdateInput, string> = {
   photoUrl: "photo_url",
   onHand: "on_hand",
   reorderThreshold: "reorder_threshold",
+  active: "active",
 };
 
 export async function updateCatalogItem(sku: string, patch: CatalogUpdateInput): Promise<CatalogItem | null> {
@@ -111,6 +112,13 @@ export async function updateCatalogItem(sku: string, patch: CatalogUpdateInput):
 
 export async function setCatalogActive(sku: string, active: boolean): Promise<void> {
   await sql`UPDATE catalog_items SET active = ${active}, updated_at = NOW() WHERE sku = ${sku}`;
+}
+
+/** Permanent delete. Order history keeps its own copy of item name/qty, so past
+ *  orders are unaffected. */
+export async function deleteCatalogItem(sku: string): Promise<boolean> {
+  const rows = await sql<{ sku: string }>`DELETE FROM catalog_items WHERE sku = ${sku} RETURNING sku`;
+  return rows.length > 0;
 }
 
 export async function adjustInventory(

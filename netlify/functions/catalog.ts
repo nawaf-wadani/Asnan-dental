@@ -9,6 +9,7 @@ import {
   createCatalogItem,
   updateCatalogItem,
   setCatalogActive,
+  deleteCatalogItem,
 } from "../lib/repos";
 import { audit } from "../lib/audit";
 import { CATALOG_CATEGORIES } from "../../shared/catalog";
@@ -46,9 +47,15 @@ export default withErrors(async (req, context) => {
   if (req.method === "DELETE") {
     const admin = await requireAdmin(req);
     if (!(await getCatalogBySku(sku))) throw new HttpError(404, "Item not found");
-    await setCatalogActive(sku, false);
-    await audit(admin, "catalog.retire", "catalog_item", sku);
-    return json({ ok: true });
+    const hard = new URL(req.url).searchParams.get("hard") === "1";
+    if (hard) {
+      await deleteCatalogItem(sku);
+      await audit(admin, "catalog.delete", "catalog_item", sku);
+    } else {
+      await setCatalogActive(sku, false);
+      await audit(admin, "catalog.archive", "catalog_item", sku);
+    }
+    return json({ ok: true, hard });
   }
 
   return methodNotAllowed(["PATCH", "DELETE"]);

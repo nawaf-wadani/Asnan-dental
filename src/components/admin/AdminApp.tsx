@@ -310,11 +310,11 @@ function CatalogEditor({
     }
   };
 
-  const retire = async () => {
-    if (!item || !window.confirm(`Retire "${item.name}"? It will disappear from ordering.`)) return;
+  const archive = async () => {
+    if (!item || !window.confirm(`Archive "${item.name}"? It disappears from ordering and inventory but is kept and can be restored.`)) return;
     try {
-      await catalogApi.retire(item.sku);
-      toast("Item retired", "success");
+      await catalogApi.archive(item.sku);
+      toast("Item archived", "success");
       onSaved();
     } catch (e) {
       toast(e instanceof ApiError ? e.message : "Failed", "error");
@@ -328,11 +328,26 @@ function CatalogEditor({
       onClose={onClose}
       footer={
         <div className="flex gap-2">
-          {item && (
-            <Button BRAND={BRAND} variant="danger" onClick={retire}>
-              Retire
+          {item && item.active === false ? (
+            <Button
+              BRAND={BRAND}
+              onClick={async () => {
+                try {
+                  await catalogApi.restore(item.sku);
+                  toast("Item restored", "success");
+                  onSaved();
+                } catch (e) {
+                  toast(e instanceof ApiError ? e.message : "Failed", "error");
+                }
+              }}
+            >
+              Restore
             </Button>
-          )}
+          ) : item ? (
+            <Button BRAND={BRAND} variant="danger" onClick={archive}>
+              Archive
+            </Button>
+          ) : null}
           <Button BRAND={BRAND} full disabled={busy} onClick={save}>
             {busy ? "Saving…" : "Save"}
           </Button>

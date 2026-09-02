@@ -8,8 +8,10 @@ import { audit } from "../lib/audit";
 
 export default withErrors(async (req) => {
   if (req.method === "GET") {
-    await requireAuth(req);
-    const items = await listCatalog(false);
+    const user = await requireAuth(req);
+    const includeArchived =
+      user.role === "admin" && new URL(req.url).searchParams.get("includeArchived") === "1";
+    const items = await listCatalog(includeArchived);
     return json({
       items: items.map((i) => ({
         sku: i.sku,
@@ -22,6 +24,7 @@ export default withErrors(async (req) => {
         photoUrl: i.photoUrl,
         onHand: i.onHand,
         reorderThreshold: i.reorderThreshold,
+        active: i.active,
       })),
     });
   }
