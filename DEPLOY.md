@@ -35,7 +35,7 @@ Windows remembers it after that.
 
 ## 3. Generate the Gmail / Google Workspace App Password (~2 min)
 
-The app sends order PDFs from **`Orderes@asnandental.ca`**. Google requires an
+The app sends order PDFs from **`Orders@asnandental.ca`**. Google requires an
 "App Password" for SMTP.
 
 1. Sign in to that mailbox at <https://mail.google.com>.
@@ -72,12 +72,12 @@ Keep this value for step 5 (`SMTP_PASS`).
 | `SESSION_HOURS` | `12` |
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `465` |
-| `SMTP_USER` | `Orderes@asnandental.ca` |
+| `SMTP_USER` | `Orders@asnandental.ca` |
 | `SMTP_PASS` | *(the 16-char App Password from step 3)* |
-| `SMTP_FROM` | `Asnan Dental Orders <Orderes@asnandental.ca>` |
-| `ORDER_EMAIL_TO` | `Nawaf@asnandental.ca,Orderes@asnandental.ca` |
+| `SMTP_FROM` | `Asnan Dental Orders <Orders@asnandental.ca>` |
+| `ORDER_EMAIL_TO` | `Nawaf@asnandental.ca,Orders@asnandental.ca` |
 | `ORDER_EMAIL_CC_ASSISTANT` | `true` |
-| `APP_ORIGIN` | `https://asnan-orderes.netlify.app` (or your custom domain later) |
+| `APP_ORIGIN` | `https://asnan-orders.netlify.app` (or your custom domain later) |
 
 **Generate `AUTH_SECRET`** — any long random string works. Easiest: in the Netlify
 env var dialog just mash 50+ random characters, or run this anywhere with Node/
@@ -98,8 +98,8 @@ OpenSSL: `openssl rand -base64 48`.
 
 ## 7. Rename the site / custom domain (optional)
 
-Site configuration → **Change site name** → `asnan-orderes` →
-`asnan-orderes.netlify.app`. To use `orders.asnandental.ca`, add it under
+Site configuration → **Change site name** → `asnan-orders` →
+`asnan-orders.netlify.app`. To use `orders.asnandental.ca`, add it under
 **Domain management** and create the CNAME it shows you.
 
 ---
