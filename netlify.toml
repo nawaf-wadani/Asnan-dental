@@ -1,0 +1,26 @@
+[build]
+  command = "npm run build"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  # Ship pdfkit from node_modules so its bundled .afm font metrics travel with it.
+  node_bundler = "esbuild"
+  external_node_modules = ["pdfkit"]
+
+[dev]
+  command = "npm run dev"
+  targetPort = 3000
+  port = 8888
+
+# Security headers for every response.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"

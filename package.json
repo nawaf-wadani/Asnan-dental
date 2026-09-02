@@ -1,0 +1,39 @@
+{
+  "name": "asnan-dental",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview --port 3000"
+  },
+  "dependencies": {
+    "@netlify/database": "^1.0.0",
+    "@netlify/functions": "^2.8.2",
+    "@tailwindcss/vite": "^4.0.6",
+    "@tanstack/react-router": "1.168.22",
+    "@tanstack/react-start": "1.167.41",
+    "@tanstack/router-plugin": "1.167.22",
+    "jose": "^5.9.6",
+    "lucide-react": "^0.576.0",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.15.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.0.6",
+    "vite-tsconfig-paths": "^6.0.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@netlify/vite-plugin-tanstack-start": "1.3.7",
+    "@types/node": "^22.10.2",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pdfkit": "^0.14.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.7.2",
+    "vite": "^7.1.7"
+  }
+}
