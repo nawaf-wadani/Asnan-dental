@@ -67,4 +67,10 @@ and no phone number until each clinic confirms the right one.
 - Forms: enabled. Add email notifications for `book-hazeldean` and
   `book-bank-street` under Forms → Form notifications.
 - Domain: `book.asnandental.ca` (HTTPS certificate is issued automatically once DNS
-  points at Netlify).
+  points at Netlify). DNS is in Cloudflare (MediaNV's account): CNAME `book` →
+  `asnan-book-ads.netlify.app`, **DNS only** (grey cloud), or Netlify can't issue
+  the certificate. Never move the domain's nameservers to Netlify.
+- Netlify address → real domain: `REDIRECT_NETLIFY_HOST` in `build.mjs` adds
+  `https://asnan-book-ads.netlify.app/* → https://book.asnandental.ca/:splat 301!`
+  at the top of `_redirects` (path and query string kept). Turn it on only after
+  `https://book.asnandental.ca` loads with a valid certificate, then redeploy.
