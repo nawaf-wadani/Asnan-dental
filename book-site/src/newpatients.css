@@ -1,0 +1,672 @@
+/* Alexandria, hosted on this site (no Google Fonts). Files from @fontsource/alexandria 5.2.5, OFL. */
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:300;src:url(/assets/fonts/alexandria-latin-ext-300-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:300;src:url(/assets/fonts/alexandria-latin-300-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:400;src:url(/assets/fonts/alexandria-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:400;src:url(/assets/fonts/alexandria-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:500;src:url(/assets/fonts/alexandria-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Alexandria';font-style:normal;font-display:swap;font-weight:500;src:url(/assets/fonts/alexandria-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
+/* Asnan Dental — new patient campaign page
+   Visual language from the Asnan brand identity ("Web feel & look") and the live
+   clinic websites: a purple hero with white Alexandria type, a mint underline bar,
+   white pill buttons, big curves and the oversized-corner card.
+   Colours: master logo palette + brand identity palette (ASNAN_MASTER_BRAND_SYSTEM v1.1). */
+
+:root {
+  color-scheme: light;
+
+  --purple: #8169E8;        /* master logo purple */
+  --hero: #785FE0;          /* same purple, a touch deeper so white text passes WCAG AA */
+  --light-purple: #9C7BFA;  /* logo mark, decorative shapes */
+  --onion: #6862A3;         /* Giant Onion: buttons, small purple text */
+  --mint: #6FE1CE;          /* Blue Frosting as rendered */
+  --off-white: #F8F7FF;
+  --butter: #FFFCC5;
+
+  --ink: #1A1724;
+  --muted: #5B5670;
+  --mint-ink: #1F5E55;
+  --line: #DDD8F2;
+  --line-strong: #D9D4EC;
+  --wash: #F1EEFC;
+  --surface: #FFFFFF;
+  --error: #9B2C4B;
+  --error-wash: #FBEFF3;
+
+  --focus: 0 0 0 3px #FFFFFF, 0 0 0 6px var(--onion);
+  --shadow-panel: 0 2px 0 rgba(104, 98, 163, 0.06), 0 40px 80px -40px rgba(56, 40, 140, 0.45);
+
+  /* Brand card: 28 px corners with one oversized top-right corner */
+  --card-radius: 28px 90px 28px 28px;
+  --clinic-radius: 22px 64px 22px 22px;
+
+  --font: "Alexandria", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --gutter: 16px;
+}
+@media (min-width: 720px) { :root { --gutter: 40px; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+a[href^="tel:"] { white-space: nowrap; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--off-white);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Approved background pattern C (dot grid) on the light part of the page, edges only. */
+body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(156, 123, 250, 0.3) 1.6px, transparent 1.9px);
+  background-size: 30px 30px;
+  background-position: 15px 15px;
+  -webkit-mask-image: linear-gradient(90deg, #000 0, transparent 120px, transparent calc(100% - 120px), #000 100%);
+          mask-image: linear-gradient(90deg, #000 0, transparent 120px, transparent calc(100% - 120px), #000 100%);
+}
+@media (max-width: 719px) { body::before { display: none; } }
+
+img, svg { display: block; max-width: 100%; }
+a { color: var(--onion); text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
+:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 8px; }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: var(--gutter); top: -60px; z-index: 10;
+  background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; text-decoration: none;
+}
+.skip:focus { top: 12px; color: #fff; }
+
+.wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 var(--gutter); }
+
+/* ---------- Purple top (header sits on it) ---------- */
+.top { background: var(--hero); color: #FFFFFF; }
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  position: relative;
+  z-index: 3;
+}
+@media (min-width: 720px) { .site-header { padding-top: 34px; padding-bottom: 30px; } }
+
+.brand { display: inline-flex; color: var(--off-white); }
+.brand svg { width: 168px; height: auto; }
+@media (min-width: 720px) { .brand svg { width: 240px; } }
+
+.call-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: var(--onion);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.call-pill:hover { color: var(--ink); }
+.call-pill svg { width: 18px; height: 18px; flex: none; }
+.call-pill .long { display: none; }
+@media (min-width: 480px) { .call-pill .short { display: none; } .call-pill .long { display: inline; } }
+
+/* ---------- Layout ---------- */
+.layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: 72px;
+}
+.band { grid-column: 1; grid-row: 1; }
+.hero { grid-column: 1; grid-row: 1; }
+.panel { grid-column: 1; grid-row: 2; }
+
+@media (min-width: 1000px) {
+  .layout {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6.4fr);
+    grid-template-rows: auto 1fr;
+    column-gap: 64px;
+    padding-bottom: 104px;
+  }
+  .band { grid-column: 1 / -1; grid-row: 1; }
+  .hero { grid-column: 1; grid-row: 1; }
+  .panel { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+}
+
+/* The purple hero band: full-bleed, with the big curve and rings from the website. */
+.band {
+  position: relative;
+  z-index: 0;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--hero);
+  border-bottom-left-radius: clamp(56px, 10vw, 180px);
+  overflow: hidden;
+  pointer-events: none;
+}
+.band::before {           /* soft lighter-purple circle, lower left */
+  content: "";
+  position: absolute;
+  width: clamp(420px, 52vw, 820px);
+  aspect-ratio: 1;
+  left: clamp(-320px, -18vw, -120px);
+  bottom: clamp(-420px, -30vw, -200px);
+  border-radius: 50%;
+  background: var(--light-purple);
+  opacity: 0.55;
+  outline: 1.5px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 80px;
+}
+.band::after {            /* mint shape, upper right, like the website */
+  content: "";
+  position: absolute;
+  width: clamp(260px, 34vw, 560px);
+  aspect-ratio: 1;
+  right: clamp(-200px, -9vw, -80px);
+  top: clamp(-240px, -14vw, -120px);
+  border-radius: 50%;
+  background: var(--mint);
+}
+@media (max-width: 999px) {
+  .band::after { width: 200px; right: -100px; top: auto; bottom: -40px; }
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  color: #FFFFFF;
+  padding: 10px 0 92px;
+}
+@media (min-width: 1000px) { .hero { padding: 26px 0 120px; } }
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.eyebrow::before { content: ""; width: 10px; height: 10px; background: var(--mint); flex: none; }
+
+.headline {
+  margin: 0;
+  font-weight: 300;
+  font-size: clamp(2.5rem, 1.3rem + 3.5vw, 4.1rem);
+  line-height: 1.07;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.headline span { display: block; }
+.headline::after {        /* mint underline bar from the website hero */
+  content: "";
+  display: block;
+  width: min(100%, 400px);
+  height: 8px;
+  margin-top: 26px;
+  background: var(--mint);
+}
+
+.support {
+  margin: 24px 0 0;
+  max-width: 34ch;
+  font-size: 1.1875rem;
+  line-height: 1.6;
+}
+
+.hero-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  color: var(--onion);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.hero-note::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--mint); flex: none; }
+
+/* ---------- Aside ---------- */
+.next-title { margin: 0 0 16px; font-size: 1.25rem; font-weight: 500; }
+.next { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 14px; max-width: 420px; }
+.next li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 14px;
+  align-items: baseline;
+  color: var(--muted);
+}
+.next li::before {
+  content: counter(step);
+  display: grid; place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  transform: translateY(-2px);
+}
+.talk { margin: 32px 0 0; padding-top: 22px; border-top: 2px solid var(--line); max-width: 420px; color: var(--muted); }
+.talk strong { display: block; color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+.talk a { font-weight: 500; white-space: nowrap; }
+
+/* ---------- Form panel ---------- */
+.panel {
+  position: relative;
+  z-index: 2;
+  margin-top: -56px;
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-panel);
+  padding: 28px 20px 30px;
+}
+@media (min-width: 560px) { .panel { padding: 40px 36px; } }
+@media (min-width: 1000px) { .panel { margin-top: 12px; } }
+@media (min-width: 1200px) { .panel { padding: 48px 48px 44px; } }
+
+.panel-title {
+  margin: 0 0 26px;
+  font-weight: 300;
+  font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.section { margin-top: 22px; }
+.section:first-of-type { margin-top: 0; }
+.section > legend:not(.visually-hidden) {
+  float: left; width: 100%; padding: 0; margin: 0 0 10px;
+  font-size: 0.9375rem; font-weight: 500; line-height: 1.3;
+}
+.section > legend + * { clear: both; }
+
+/* ---------- Clinic cards ---------- */
+.clinics { display: grid; gap: 14px; }
+.clinic { position: relative; display: block; cursor: pointer; }
+.clinic input { position: absolute; opacity: 0; pointer-events: none; }
+.clinic-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 22px 22px 20px;
+  border-radius: var(--clinic-radius);
+  border: 2px solid transparent;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+@media (min-width: 600px) {
+  .clinics { grid-template-columns: 1fr 1fr; }
+}
+.clinic--bank .clinic-body { background: var(--onion); color: #FFFFFF; }
+.clinic--hazel .clinic-body { background: var(--mint); color: var(--ink); }
+
+.clinic-name { margin: 2px 48px 4px 0; font-size: 1.375rem; font-weight: 400; line-height: 1.2; }
+.clinic-addr { margin: 0; font-size: 0.9375rem; line-height: 1.45; }
+.clinic-lang { margin: auto 0 0; padding-top: 14px; font-size: 0.8125rem; opacity: 0.9; }
+
+.clinic-check {
+  position: absolute; top: 16px; right: 16px;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: background-color 0.18s ease;
+}
+.clinic--hazel .clinic-check { border-color: rgba(26, 23, 36, 0.5); }
+.clinic-check svg { width: 18px; height: 18px; opacity: 0; transform: scale(0.6); transition: opacity 0.18s ease, transform 0.18s ease; }
+.clinic input:checked + .clinic-body .clinic-check { background: #FFFFFF; border-color: #FFFFFF; }
+.clinic input:checked + .clinic-body .clinic-check svg { opacity: 1; transform: none; }
+.clinic--bank .clinic-check svg { color: var(--onion); }
+.clinic--hazel .clinic-check svg { color: var(--mint-ink); }
+
+/* Once a clinic is chosen, the other one steps back to an outline. */
+.clinics:has(input:checked) .clinic:not(:has(input:checked)) .clinic-body { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+.clinics:has(input:checked) .clinic:not(:has(input:checked)) .clinic-check { border-color: var(--line-strong); }
+.clinic:hover .clinic-body { border-color: var(--purple); }
+.clinic input:focus-visible + .clinic-body { box-shadow: var(--focus); }
+
+/* ---------- Fields ---------- */
+.grid-2 { display: grid; gap: 18px; }
+@media (min-width: 600px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+.field { display: grid; gap: 7px; align-content: start; }
+.section .field, .section .grid-2, .section .choice-group { margin-top: 22px; }
+.section .grid-2 > .field { margin-top: 0; }
+.section > legend + .grid-2, .section > legend + .choice-group { margin-top: 16px; }
+
+label.label, .group-label { font-size: 0.9375rem; font-weight: 500; color: var(--ink); }
+.optional { color: var(--muted); font-weight: 400; }
+.hint { margin: 0; font-size: 0.875rem; color: var(--muted); }
+
+input[type="text"], input[type="tel"], input[type="email"], textarea {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 16px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+textarea { min-height: 112px; resize: vertical; line-height: 1.5; }
+input::placeholder, textarea::placeholder { color: #8D88A3; }
+input[type="text"]:hover, input[type="tel"]:hover, input[type="email"]:hover, textarea:hover { border-color: #BDB5DF; }
+input[type="text"]:focus, input[type="tel"]:focus, input[type="email"]:focus, textarea:focus {
+  outline: none; border-color: var(--purple); box-shadow: 0 0 0 4px rgba(129, 105, 232, 0.2);
+}
+[aria-invalid="true"] { border-color: var(--error) !important; }
+.error { margin: 0; color: var(--error); font-size: 0.875rem; font-weight: 500; }
+.error:empty { display: none; }
+
+.choice-group > legend { padding: 0; margin-bottom: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 18px;
+  border: 1.5px solid var(--line-strong); border-radius: 999px;
+  background: var(--surface); color: var(--ink);
+  font-size: 0.9375rem; cursor: pointer; user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.chip span:hover { border-color: var(--purple); }
+.chip input:checked + span { background: var(--onion); border-color: var(--onion); color: #FFFFFF; }
+.chip input:focus-visible + span { box-shadow: var(--focus); }
+.chips--days .chip span { min-width: 64px; justify-content: center; padding: 0 14px; }
+
+.note { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--butter); color: var(--ink); font-size: 0.9375rem; }
+.note a { font-weight: 500; }
+.note[hidden], .reveal[hidden] { display: none; }
+
+.consent {
+  display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start;
+  margin-top: 28px; padding: 16px; border-radius: 14px; background: var(--wash);
+  cursor: pointer; font-size: 0.9375rem;
+}
+.consent input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--onion); }
+
+.actions { margin-top: 24px; }
+.submit {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; min-height: 58px; padding: 0 28px;
+  border: 0; border-radius: 999px;
+  background: var(--onion); color: #FFFFFF;
+  font: inherit; font-size: 1.0625rem; font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.submit:hover { background: #57518F; }
+.submit:active { transform: translateY(1px); }
+.submit[disabled] { opacity: 0.7; cursor: progress; }
+.fine { margin: 14px 0 0; color: var(--muted); font-size: 0.875rem; text-align: center; }
+
+.form-error { margin: 0 0 20px; padding: 14px 16px; border-radius: 14px; background: var(--error-wash); color: var(--error); font-weight: 500; }
+.form-error[hidden] { display: none; }
+.form-error a { color: var(--error); }
+
+/* ---------- Sent ---------- */
+.sent[hidden] { display: none; }
+.sent .eyebrow { color: var(--onion); }
+.sent-title {
+  margin: 0;
+  font-weight: 300;
+  font-size: clamp(2.2rem, 1.4rem + 2.6vw, 3.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+.sent-title span { display: block; }
+.sent-title .second { color: var(--purple); }
+.sent p { color: var(--muted); font-size: 1.0625rem; max-width: 46ch; }
+.sent .sent-lead { margin-top: 20px; }
+.sent .link-btn {
+  margin-top: 26px; display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px;
+  border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--surface);
+  color: var(--onion); font: inherit; font-weight: 500; cursor: pointer;
+}
+.sent .link-btn:hover { border-color: var(--onion); }
+
+/* ---------- Footer ---------- */
+.site-footer { padding-bottom: 40px; color: var(--muted); font-size: 0.9375rem; }
+.clinic-list { display: grid; gap: 28px; border-top: 2px solid var(--line); padding-top: 32px; }
+@media (min-width: 720px) { .clinic-list { grid-template-columns: 1fr 1fr 1fr; gap: 40px; } }
+.clinic-list p { margin: 0; }
+.clinic-list strong { color: var(--ink); font-weight: 500; }
+.legal { margin-top: 28px; font-size: 0.8125rem; }
+
+/* ---------- Thank-you page (no-JavaScript fallback) ---------- */
+.thanks { position: relative; z-index: 1; color: #FFFFFF; padding: 10px 0 120px; }
+.thanks .support { max-width: 46ch; }
+.thanks .talk { color: #FFFFFF; border-top-color: rgba(255, 255, 255, 0.35); }
+.thanks .talk strong, .thanks .talk a, .thanks .support a { color: #FFFFFF; }
+
+/* ---------- Optional details (collapsed by default) ---------- */
+.more { margin-top: 22px; }
+.more > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--wash);
+  color: var(--onion);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  list-style: none;
+}
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::before {
+  content: "+";
+  display: grid; place-items: center;
+  width: 26px; height: 26px; flex: none;
+  border-radius: 50%;
+  background: var(--onion);
+  color: #FFFFFF;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+.more[open] > summary::before { content: "\2212"; }
+.more > summary:active { background: var(--line); }
+.more > summary:focus-visible { box-shadow: var(--focus); }
+
+/* ---------- Phones ----------
+   Short purple intro so the form starts on the first screen, the form card runs
+   edge to edge, and decoration stays out of the way of the form. */
+@media (max-width: 999px) {
+  .band::before, .band::after { display: none; }
+  /* Mint shape tucked behind the call button, like the website's top-right mint block. */
+  .top { position: relative; overflow: hidden; }
+  .top::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    width: 190px;
+    aspect-ratio: 1;
+    right: -70px;
+    top: -122px;
+    border-radius: 50%;
+    background: var(--mint);
+    pointer-events: none;
+  }
+  .hero { padding: 4px 0 64px; }
+  .eyebrow { margin-bottom: 14px; font-size: 0.75rem; letter-spacing: 0.14em; }
+  .headline { font-size: clamp(2.125rem, 1.2rem + 4.2vw, 3.25rem); }
+  .headline::after { width: 120px; height: 6px; margin-top: 18px; }
+  .support { margin-top: 16px; font-size: 1.0625rem; line-height: 1.55; max-width: 40ch; }
+  .hero-note { margin-top: 18px; padding: 8px 16px; font-size: 0.875rem; }
+  .panel { margin-top: -36px; }
+}
+
+@media (max-width: 599px) {
+  .site-header { padding-top: 14px; padding-bottom: 14px; }
+  .brand svg { width: 148px; }
+  .call-pill { min-height: 44px; padding: 0 16px; }
+
+  /* Edge-to-edge form card with the brand's oversized top-right corner. */
+  .panel {
+    margin-left: calc(-1 * var(--gutter));
+    margin-right: calc(-1 * var(--gutter));
+    border-radius: 28px 72px 0 0;
+    padding: 26px 16px 28px;
+    box-shadow: 0 -12px 30px -18px rgba(56, 40, 140, 0.35);
+  }
+  .panel-title { font-size: 1.625rem; margin-bottom: 20px; }
+
+  .clinics { gap: 10px; }
+  .clinic-body { padding: 16px 16px 15px; border-radius: 18px 48px 18px 18px; }
+  .clinic-name { font-size: 1.1875rem; margin: 2px 44px 2px 0; }
+  .clinic-addr { font-size: 0.875rem; }
+  .clinic-lang { padding-top: 6px; }
+  .clinic-check { top: 12px; right: 12px; width: 32px; height: 32px; }
+
+  /* Answers sit in an even grid instead of ragged rows. */
+  .chips { display: grid; grid-template-columns: 1fr 1fr; }
+  .chips--3, .chips--days { grid-template-columns: repeat(3, 1fr); }
+  .chip span {
+    width: 100%;
+    height: 100%;
+    min-height: 48px;
+    justify-content: center;
+    padding: 8px 10px;
+    text-align: center;
+    line-height: 1.25;
+    font-size: 0.875rem;
+  }
+  .chips--days .chip span { min-width: 0; }
+
+  .consent { padding: 14px; font-size: 0.875rem; }
+  .submit { min-height: 56px; }
+  .clinic-list { gap: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* ---------- Free cleaning draw ---------- */
+.consent + .error + .consent,
+.consent + .consent { margin-top: 10px; }
+.consent--optional { background: transparent; border: 1.5px solid var(--line-strong); }
+.consent a { color: var(--onion); font-weight: 500; }
+
+.rules { margin-top: 26px; border-top: 2px solid var(--line); padding-top: 18px; }
+.rules > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--onion);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  list-style: none;
+}
+.rules > summary::-webkit-details-marker { display: none; }
+.rules > summary::after { content: "+"; font-size: 1.125rem; line-height: 1; }
+.rules[open] > summary::after { content: "\2212"; }
+.rules ol { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 0.8125rem; line-height: 1.55; }
+.rules li + li { margin-top: 8px; }
+.rules strong { color: var(--ink); font-weight: 500; }
+.sent a.link-btn { text-decoration: none; }
+
+/* ---------- Invisalign offer (Hazeldean) ---------- */
+.headline .price {
+  display: block;
+  font-weight: 500;
+  font-size: clamp(4.25rem, 2rem + 8vw, 7.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  margin-top: 4px;
+}
+.hero-note--butter { background: var(--butter); color: var(--ink); }
+.hero-note--butter::before { background: var(--onion); }
+
+.clinic-static {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+  border-radius: var(--clinic-radius);
+  background: var(--mint);
+  color: var(--ink);
+}
+.clinic-static .clinic-name { margin-right: 0; }
+.clinic-static + .section { margin-top: 22px; }
+
+/* ---------- Privacy policy (long-form text) ---------- */
+.doc-wrap { padding-top: 32px; padding-bottom: 64px; }
+.doc {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-panel);
+  padding: 32px 22px 36px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+@media (min-width: 720px) { .doc { padding: 48px 56px 52px; } }
+.doc .eyebrow { color: var(--onion); }
+.doc h1 { margin: 0; color: var(--ink); font-weight: 300; font-size: clamp(2.25rem, 1.6rem + 2vw, 3.25rem); line-height: 1.1; letter-spacing: -0.02em; }
+.doc .doc-dates { margin: 12px 0 0; font-size: 0.875rem; }
+.doc h2 { margin: 36px 0 10px; color: var(--ink); font-size: 1.1875rem; font-weight: 500; line-height: 1.35; }
+.doc p { margin: 0 0 12px; }
+.doc ul { margin: 0 0 14px; padding-left: 20px; }
+.doc li + li { margin-top: 6px; }
+.doc strong { color: var(--ink); font-weight: 500; }
+@media (max-width: 599px) {
+  .doc-wrap { padding-left: 0; padding-right: 0; padding-top: 0; }
+  .doc { border-radius: 0; box-shadow: none; }
+}
+.doc .doc-callout { margin: 20px 0 0; padding: 14px 18px; background: var(--butter); color: var(--ink); border-radius: 16px; font-size: 0.9375rem; }
+.doc h2[id] { scroll-margin-top: 20px; }
+.req-list { display: grid; gap: 10px; margin: 16px 0 18px; }
+.req { background: var(--off-white); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px 15px; }
+.req h3 { margin: 0 0 4px; color: var(--ink); font-size: 1rem; font-weight: 500; line-height: 1.4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.req-when { flex: none; padding: 3px 11px; border-radius: 999px; background: var(--mint); color: var(--ink); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.01em; white-space: nowrap; }
+.req p { margin: 0; font-size: 0.9375rem; line-height: 1.55; }
+
+/* ---------- Ottawa Medical Spa draw: extra offers under the headline ---------- */
+.perks { margin: 22px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 1.0625rem; line-height: 1.4; }
+.perks li { display: flex; align-items: center; gap: 12px; }
+.perks li::before {
+  content: ""; flex: none; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--mint) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A1724' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4L18 8.5'/%3E%3C/svg%3E") center / 15px no-repeat;
+}
+.perks + .hero-note { margin-top: 24px; }
+@media (max-width: 599px) { .perks { font-size: 1rem; margin-top: 18px; } }
+.partner { display: inline-block; margin: 0 0 26px; padding: 12px 20px; background: #FFFFFF; border-radius: 16px 40px 16px 16px; box-shadow: 0 16px 30px -18px rgba(26, 23, 36, 0.45); }
+.partner img { display: block; height: 64px; width: auto; }
+@media (max-width: 599px) { .partner { margin-bottom: 18px; padding: 9px 14px; } .partner img { height: 44px; } }

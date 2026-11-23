@@ -1,0 +1,30 @@
+# book.asnandental.ca — ad landing pages, one per clinic.
+# A separate Netlify project from the supply app at the repo root and from
+# newpatients.asnandental.ca. In Netlify set Base directory = book-site.
+
+[build]
+  command = "node build.mjs"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Clinic-page rewrites (with and without trailing slash) are generated into
+# dist/_redirects by build.mjs.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Ad-only pages: keep them out of search so they don't compete with the
+    # main websites. Each page also has <meta name="robots" content="noindex">.
+    X-Robots-Tag = "noindex, nofollow"
+    Strict-Transport-Security = "max-age=31536000"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/assets/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
