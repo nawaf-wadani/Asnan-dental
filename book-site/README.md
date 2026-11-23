@@ -14,11 +14,36 @@ the rest of this repo and from `newpatients.asnandental.ca` (Netlify project
 | `/bank-street/thank-you/` | Conversion page, reached only after a real submit |
 | `/` and 404 | Plain page, no tracking, no clinic chooser |
 
+## Where the pages are live
+
+The ads use the **newpatients.asnandental.ca** copy (Netlify project `asnan-book`):
+
+| Page | URL |
+|---|---|
+| Hazeldean | `https://newpatients.asnandental.ca/googlehazeldean` (also `/googlehazeldain`) |
+| Hazeldean Invisalign | `https://newpatients.asnandental.ca/googlehazeldean/invisalign` |
+| Bank Street | `https://newpatients.asnandental.ca/googlebankstreet` |
+| Bank Street Invisalign | `https://newpatients.asnandental.ca/googlebankstreet/invisalign` |
+
+The same pages at `/<clinic>/` on `asnan-book-ads.netlify.app` (and later
+`book.asnandental.ca`) come from the default build below.
+
 ## Build
 
 ```bash
-node build.mjs     # writes dist/, no dependencies
+node build.mjs     # writes dist/ for asnan-book-ads, no dependencies
+
+# Same pages into the newpatients site (repo nawaf-wadani/asnan-calls), at each
+# clinic's newpatientsSlug. Writes googlehazeldean/, googlebankstreet/, _redirects
+# and assets/book-ads.{css,js}; leaves everything else in that folder alone.
+node build.mjs --newpatients ../../asnan-calls/new-patient-booking
 ```
+
+Then deploy that folder to Netlify project `asnan-book`. Its `netlify.toml`
+applies the strict Content-Security-Policy to newpatients' own pages only, not to
+`/googlehazeldean/*` or `/googlebankstreet/*`, because it would block the Google
+Ads tag. Newpatients form entries arrive under the same form names in project
+`asnan-book`.
 
 The build fails if:
 

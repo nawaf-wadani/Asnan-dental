@@ -20,6 +20,7 @@ export const HOURS = "Mon to Sat, 9 a.m. to 5 p.m.";
 export const clinics = [
   {
     slug: "hazeldean",
+    newpatientsSlug: "googlehazeldean", // path on newpatients.asnandental.ca (build.mjs --newpatients)
     name: "Hazeldean",
     fullName: "Asnan Dental Hazeldean",
     area: "Stittsville",
@@ -46,6 +47,7 @@ export const clinics = [
   },
   {
     slug: "bank-street",
+    newpatientsSlug: "googlebankstreet",
     name: "Bank Street",
     fullName: "Asnan Dental Bank Street",
     area: "Ottawa",

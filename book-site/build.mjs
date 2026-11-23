@@ -15,14 +15,33 @@
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile, cp, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   clinics, reasons, days, times, landing, services, HOURS, META_PIXEL_ID, PRIVACY_URL,
 } from "./src/clinics.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const out = join(root, "dist");
+
+// Two targets from the same source:
+//   node build.mjs                      -> ./dist, for Netlify project asnan-book-ads
+//                                          (book.asnandental.ca), clinic pages at /<slug>/
+//   node build.mjs --newpatients <dir>  -> the same pages written into the
+//                                          newpatients.asnandental.ca site folder (project
+//                                          asnan-book), at each clinic's newpatientsSlug
+//                                          (/googlehazeldean/, /googlebankstreet/). That site
+//                                          already has the favicons and fonts, so only
+//                                          assets/book-ads.css and assets/book-ads.js are added.
+const npArg = process.argv.indexOf("--newpatients");
+const NEWPATIENTS = npArg !== -1;
+if (NEWPATIENTS && !process.argv[npArg + 1]) throw new Error("--newpatients needs the newpatients site folder");
+const out = NEWPATIENTS ? resolve(process.argv[npArg + 1]) : join(root, "dist");
+if (NEWPATIENTS && !(existsSync(join(out, "netlify.toml")) && existsSync(join(out, "assets/fonts")))) {
+  throw new Error(`${out} doesn't look like the newpatients site folder (no netlify.toml or assets/fonts)`);
+}
+const SITE_HOST = NEWPATIENTS ? "newpatients.asnandental.ca" : "book.asnandental.ca";
+const siteClinics = NEWPATIENTS ? clinics.map((c) => ({ ...c, slug: c.newpatientsSlug })) : clinics;
 
 // The real address. When REDIRECT_NETLIFY_HOST is true, anyone who opens the
 // Netlify address (asnan-book-ads.netlify.app) is sent there with a 301, keeping
@@ -38,8 +57,10 @@ const css = (await readFile(join(root, "src/newpatients.css"), "utf8")) + (await
 const js = await readFile(join(root, "src/assets/book.js"), "utf8");
 const wordmark = (await readFile(join(root, "src/wordmark.svg"), "utf8")).trim();
 const v = (s) => createHash("sha256").update(s).digest("hex").slice(0, 10);
-const cssUrl = `/assets/styles.css?v=${v(css)}`;
-const jsUrl = `/assets/book.js?v=${v(js)}`;
+const cssFile = NEWPATIENTS ? "assets/book-ads.css" : "assets/styles.css";
+const jsFile = NEWPATIENTS ? "assets/book-ads.js" : "assets/book.js";
+const cssUrl = `/${cssFile}?v=${v(css)}`;
+const jsUrl = `/${jsFile}?v=${v(js)}`;
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -178,7 +199,7 @@ function form(c, page) {
     <form name="${c.formName}" id="booking" method="POST" action="/${c.slug}/thank-you/" data-netlify="true" netlify-honeypot="bot-field" novalidate
       data-clinic="${c.slug}" data-clinic-name="${esc(c.name)}" data-thanks="/${c.slug}/thank-you/" data-subject="${esc(page.requestType)}">
         <input type="hidden" name="form-name" value="${c.formName}">
-        <input type="hidden" name="subject" value="${esc(page.requestType)}: ${esc(c.name)} (book.asnandental.ca)">
+        <input type="hidden" name="subject" value="${esc(page.requestType)}: ${esc(c.name)} (${SITE_HOST})">
         <input type="hidden" name="request_type" value="${esc(page.requestType)}">
         <input type="hidden" name="clinic" value="${esc(c.name)}">
         ${hidden}
@@ -352,7 +373,7 @@ ${footer(null, { note: false })}
 const files = new Map();
 const rewrites = [];
 
-for (const c of clinics) {
+for (const c of siteClinics) {
   files.set(`${c.slug}/index.html`, landingPage(c, landing));
   rewrites.push(`/${c.slug}`);
   for (const s of c.services) {
@@ -364,34 +385,46 @@ for (const c of clinics) {
   rewrites.push(`/${c.slug}/thank-you`);
 }
 
-files.set("index.html", plainPage({
-  title: "Asnan Dental",
-  eyebrow: "Asnan Dental",
-  lines: ["Looking for", "Asnan Dental?"],
-  text: "This address is for appointment requests from our ads. Our website has everything about our clinics.",
-}));
-files.set("404.html", plainPage({
-  title: "Page not found | Asnan Dental",
-  eyebrow: "Page not found",
-  lines: ["We couldn't find", "that page."],
-  text: "The link may be out of date. Our website has everything about our clinics.",
-}));
+// The home page and 404 belong to book.asnandental.ca only; newpatients has its own.
+if (!NEWPATIENTS) {
+  files.set("index.html", plainPage({
+    title: "Asnan Dental",
+    eyebrow: "Asnan Dental",
+    lines: ["Looking for", "Asnan Dental?"],
+    text: "This address is for appointment requests from our ads. Our website has everything about our clinics.",
+  }));
+  files.set("404.html", plainPage({
+    title: "Page not found | Asnan Dental",
+    eyebrow: "Page not found",
+    lines: ["We couldn't find", "that page."],
+    text: "The link may be out of date. Our website has everything about our clinics.",
+  }));
+}
 
 // Serve every clinic page with or without a trailing slash as a rewrite (no
 // redirect), so the ad's query string always reaches the page untouched.
 // The host redirect has to come first: Netlify uses the first rule that matches.
-const hostRedirect = REDIRECT_NETLIFY_HOST
+const hostRedirect = REDIRECT_NETLIFY_HOST && !NEWPATIENTS
   ? [`# Netlify address -> real domain, same path and query string`, `${NETLIFY_ORIGIN}/*  ${SITE_ORIGIN}/:splat  301!`]
   : [];
-files.set("_redirects", ["# Generated by build.mjs", ...hostRedirect, ...rewrites.map((p) => `${p}  ${p}/index.html  200!`)].join("\n") + "\n");
+const redirectsHeader = NEWPATIENTS
+  ? "# Generated by asnan-dental book-site/build.mjs --newpatients (Google ad pages).\n# Don't edit: hand-written rules go in netlify.toml."
+  : "# Generated by build.mjs";
+files.set("_redirects", [redirectsHeader, ...hostRedirect, ...rewrites.map((p) => `${p}  ${p}/index.html  200!`)].join("\n") + "\n");
 
-await rm(out, { recursive: true, force: true });
+if (NEWPATIENTS) {
+  // Only replace what this build owns; the rest of the folder is the newpatients site.
+  for (const c of siteClinics) await rm(join(out, c.slug), { recursive: true, force: true });
+} else {
+  await rm(out, { recursive: true, force: true });
+}
 for (const [path, body] of files) {
   await mkdir(dirname(join(out, path)), { recursive: true });
   await writeFile(join(out, path), body);
 }
-await cp(join(root, "src/assets"), join(out, "assets"), { recursive: true });
-await writeFile(join(out, "assets/styles.css"), css);
+if (!NEWPATIENTS) await cp(join(root, "src/assets"), join(out, "assets"), { recursive: true });
+await writeFile(join(out, cssFile), css);
+if (NEWPATIENTS) await writeFile(join(out, jsFile), js);
 
 // ---- Checks ---------------------------------------------------------------
 
@@ -417,7 +450,7 @@ const titles = new Set();
 
 for (const [path, html] of files) {
   if (!path.endsWith(".html")) continue;
-  const owner = clinics.find((c) => path.startsWith(c.slug + "/"));
+  const owner = siteClinics.find((c) => path.startsWith(c.slug + "/"));
   const title = html.match(/<title>([^<]*)<\/title>/)?.[1];
   if (!title) problems.push(`${path}: no <title>`);
   else if (titles.has(title)) problems.push(`${path}: duplicate title "${title}"`);
@@ -426,7 +459,7 @@ for (const [path, html] of files) {
   if (!/<meta name="robots" content="noindex/.test(html)) problems.push(`${path}: not noindex`);
   if (/href="tel:/i.test(html)) problems.push(`${path}: has a tel: link`);
 
-  for (const c of clinics) {
+  for (const c of siteClinics) {
     const hasTag = html.includes(c.googleAdsId);
     const hasConversion = html.includes(c.conversionSendTo);
     if (c === owner) {
@@ -465,5 +498,5 @@ if (problems.length) {
   process.exit(1);
 }
 const pages = [...files.keys()].filter((p) => p.endsWith(".html")).sort();
-console.log(`Built ${pages.length} pages into dist/. All checks passed.`);
+console.log(`Built ${pages.length} pages into ${NEWPATIENTS ? out : "dist/"}. All checks passed.`);
 for (const p of pages) console.log("  /" + p.replace(/index\.html$/, ""));
