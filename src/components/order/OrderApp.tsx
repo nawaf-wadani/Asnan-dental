@@ -11,6 +11,7 @@ import {
   Download,
   Mail,
   AlertCircle,
+  X,
 } from "lucide-react";
 import type { CatalogItem, PlaceOrderResult } from "@shared/types";
 import { PAIRINGS, RECOMMENDED_ADDITIONS, type CatalogCategory } from "@shared/catalog";
@@ -48,7 +49,7 @@ interface DraftShape {
 
 export default function OrderApp() {
   return (
-    <AppShell title="Supply Ordering">
+    <AppShell title="Supply ordering" wide>
       <OrderFlow />
     </AppShell>
   );
@@ -238,14 +239,14 @@ function OrderFlow() {
   // ---------------------------------------------------------------- INTRO ---
   if (step === "intro") {
     return (
-      <div className="space-y-5">
+      <div className="space-y-5 max-w-3xl mx-auto">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.3em] font-bold" style={{ color: BRAND.muted }}>
-            Inventory Ordering
-          </div>
-          <h1 className="text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-            Stock the operatory.
+          <h1 className="text-3xl font-semibold" style={{ letterSpacing: "-0.01em" }}>
+            Start an order
           </h1>
+          <p className="text-sm mt-1" style={{ color: BRAND.muted }}>
+            Confirm who is ordering, then pick what you need.
+          </p>
         </div>
 
         {lineCount > 0 && (
@@ -330,7 +331,8 @@ function OrderFlow() {
       : [];
 
     return (
-      <div className="space-y-4">
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-6 xl:items-start">
+      <div className="space-y-4 min-w-0">
         <StepHeader BRAND={BRAND} onBack={() => (activeCat ? setActiveCat(null) : setStep("intro"))} label={isSpecial ? "Special requests" : activeCat ? bySku.get(catItems[0]?.sku)?.categoryLabel ?? "Category" : "Browse catalog"} />
 
         {!activeCat && (
@@ -347,7 +349,7 @@ function OrderFlow() {
             </div>
 
             {search.trim() ? (
-              <div className="space-y-2">
+              <div className="grid gap-2 lg:grid-cols-2 lg:gap-3">
                 {searchResults.length === 0 && (
                   <p className="text-sm text-center py-8" style={{ color: BRAND.muted }}>
                     Nothing matches “{search}”. Try special requests.
@@ -387,7 +389,7 @@ function OrderFlow() {
                   </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="grid gap-2 lg:grid-cols-2 lg:gap-3">
                   {categories.map((cat, i) => {
                     const Icon = iconFor(cat.key);
                     const count = catalog.filter((c) => c.category === cat.key).reduce((s, c) => s + (quantities[c.sku] ?? 0), 0);
@@ -438,7 +440,7 @@ function OrderFlow() {
         )}
 
         {activeCat && !isSpecial && (
-          <div className="space-y-2">
+          <div className="grid gap-2 lg:grid-cols-2 lg:gap-3">
             {catItems.map((it) => (
               <ItemRow key={it.sku} BRAND={BRAND} item={it} qty={quantities[it.sku] ?? 0} onQty={(q) => setQty(it.sku, q)} fav={favorites.includes(it.sku)} onFav={() => toggleFav(it.sku)} />
             ))}
@@ -447,7 +449,7 @@ function OrderFlow() {
 
         {isSpecial && <SpecialRequestsEditor BRAND={BRAND} requests={specials} onChange={setSpecials} />}
 
-        <StickyBar BRAND={BRAND}>
+        <StickyBar BRAND={BRAND} hideOnXl>
           <Button BRAND={BRAND} variant="ghost" onClick={() => (activeCat ? setActiveCat(null) : setStep("intro"))}>
             <ChevronLeft size={16} /> Back
           </Button>
@@ -458,6 +460,21 @@ function OrderFlow() {
 
         {pairFor && <PairingModal BRAND={BRAND} sku={pairFor} bySku={bySku} quantities={quantities} setQty={setQty} onClose={() => setPairFor(null)} />}
         {showRecommended && <RecommendedModal BRAND={BRAND} onClose={() => setShowRecommended(false)} />}
+      </div>
+
+      <aside className="hidden xl:block sticky top-[84px]" aria-label="Your order">
+        <OrderPanel
+          BRAND={BRAND}
+          quantities={quantities}
+          bySku={bySku}
+          setQty={setQty}
+          specialsCount={validSpecials.length}
+          totalUnits={totalUnits}
+          canReview={canReview}
+          onReview={() => setStep("review")}
+          onSpecial={() => setActiveCat("__special__")}
+        />
+      </aside>
       </div>
     );
   }
@@ -474,7 +491,7 @@ function OrderFlow() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-3xl mx-auto">
         <StepHeader BRAND={BRAND} onBack={() => setStep("browse")} label="Review order" />
 
         <GlassCard BRAND={BRAND} className="p-4 flex items-center justify-between">
@@ -575,7 +592,7 @@ function OrderFlow() {
 
   // ----------------------------------------------------------------- DONE ---
   return (
-    <div className="py-10 text-center space-y-4">
+    <div className="py-10 text-center space-y-4 max-w-xl mx-auto">
       <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white" style={{ background: `linear-gradient(135deg, ${BRAND.primary}, ${BRAND.primaryDark})` }}>
         <Check size={30} strokeWidth={2.5} />
       </div>
@@ -621,11 +638,88 @@ function StepHeader({ BRAND, onBack, label }: { BRAND: ReturnType<typeof brandFo
   );
 }
 
-function StickyBar({ BRAND, children }: { BRAND: ReturnType<typeof brandFor>; children: React.ReactNode }) {
+function StickyBar({ BRAND, children, hideOnXl = false }: { BRAND: ReturnType<typeof brandFor>; children: React.ReactNode; hideOnXl?: boolean }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-4 pt-3" style={{ background: `linear-gradient(to top, ${BRAND.paper} 65%, transparent)` }}>
+    <div className={`fixed inset-x-0 bottom-0 z-20 px-4 pb-4 pt-3${hideOnXl ? " xl:hidden" : ""}`} style={{ background: `linear-gradient(to top, ${BRAND.paper} 65%, transparent)` }}>
       <div className="max-w-3xl mx-auto flex gap-2">{children}</div>
     </div>
+  );
+}
+
+/** Wide-screen side panel: what is in the order right now, always in view while browsing. */
+function OrderPanel({
+  BRAND,
+  quantities,
+  bySku,
+  setQty,
+  specialsCount,
+  totalUnits,
+  canReview,
+  onReview,
+  onSpecial,
+}: {
+  BRAND: ReturnType<typeof brandFor>;
+  quantities: Record<string, number>;
+  bySku: Map<string, CatalogItem>;
+  setQty: (sku: string, qty: number) => void;
+  specialsCount: number;
+  totalUnits: number;
+  canReview: boolean;
+  onReview: () => void;
+  onSpecial: () => void;
+}) {
+  const entries = Object.entries(quantities);
+  return (
+    <GlassCard BRAND={BRAND}>
+      <div className="flex items-center justify-between px-[18px] pt-4 pb-2.5">
+        <h2 className="text-base font-semibold">Your order</h2>
+        <span className="text-[13px] font-semibold rounded-full px-2.5 py-0.5" style={{ background: `${BRAND.primary}26`, color: BRAND.primaryDark }}>
+          {entries.length + specialsCount}
+        </span>
+      </div>
+      {entries.length === 0 && specialsCount === 0 ? (
+        <p className="px-[18px] pb-5 text-sm" style={{ color: BRAND.muted }}>
+          Nothing added yet. Tap the + on any item and it appears here.
+        </p>
+      ) : (
+        <ul className="px-2 max-h-[48vh] overflow-y-auto">
+          {entries.map(([sku, qty]) => {
+            const it = bySku.get(sku);
+            return (
+              <li key={sku} className="flex items-center gap-2.5 p-2 rounded-xl">
+                <ItemPhoto sku={sku} photoUrl={it?.photoUrl} size={40} />
+                <span className="flex-1 min-w-0 text-[13.5px] font-medium leading-snug line-clamp-2" title={it?.name ?? sku}>
+                  {it?.name ?? sku}
+                </span>
+                <QtyControl BRAND={BRAND} qty={qty} onChange={(q) => setQty(sku, q)} compact />
+                <button onClick={() => setQty(sku, 0)} className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: BRAND.muted }} aria-label={`Remove ${it?.name ?? sku}`}>
+                  <X size={15} />
+                </button>
+              </li>
+            );
+          })}
+          {specialsCount > 0 && (
+            <li className="p-2 text-[13.5px]" style={{ color: BRAND.muted }}>
+              + {specialsCount} special request{specialsCount === 1 ? "" : "s"}
+            </li>
+          )}
+        </ul>
+      )}
+      <div className="grid gap-2.5 px-[18px] pt-3.5 pb-[18px] mt-2" style={{ borderTop: `1px solid ${BRAND.borderSolid}` }}>
+        {(entries.length > 0 || specialsCount > 0) && (
+          <div className="text-sm" style={{ color: BRAND.muted }}>
+            <b style={{ color: BRAND.ink }}>{totalUnits}</b> unit{totalUnits === 1 ? "" : "s"}
+            {specialsCount > 0 ? <> and <b style={{ color: BRAND.ink }}>{specialsCount}</b> special request{specialsCount === 1 ? "" : "s"}</> : null}
+          </div>
+        )}
+        <Button BRAND={BRAND} full disabled={!canReview} onClick={onReview}>
+          Review order <ChevronRight size={17} strokeWidth={2.5} />
+        </Button>
+        <button onClick={onSpecial} className="text-[13px] underline justify-self-center" style={{ color: BRAND.primaryDark }}>
+          Add something that's not in the catalog
+        </button>
+      </div>
+    </GlassCard>
   );
 }
 

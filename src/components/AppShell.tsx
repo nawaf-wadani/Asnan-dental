@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
-import { AsnanLogo, Spinner } from "@/components/ui/primitives";
+import { LogoTile, Spinner } from "@/components/ui/primitives";
 import LoginScreen from "@/components/LoginScreen";
 
 export function RequireAuth({ children, adminOnly = false }: { children: ReactNode; adminOnly?: boolean }) {
@@ -45,7 +45,7 @@ const NAV = [
   { to: "/rct", label: "Endo", icon: CircleDot },
 ] as const;
 
-export function AppShell({ title, children }: { title: string; children: ReactNode }) {
+export function AppShell({ title, children, wide = false }: { title: string; children: ReactNode; wide?: boolean }) {
   const { user, logout } = useAuth();
   const [dark, toggleDark] = useDarkMode();
   const BRAND = brandFor(dark);
@@ -67,13 +67,13 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
           borderColor: BRAND.glassBorder,
         }}
       >
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-          <AsnanLogo size={24} />
-          <div className="flex flex-col leading-none">
-            <span className="text-[11px] font-bold tracking-[0.18em]" style={{ color: BRAND.ink }}>
-              ASNAN DENTAL
+        <div className={`${wide ? "max-w-[1440px]" : "max-w-3xl"} mx-auto px-4 py-2.5 flex items-center gap-3`}>
+          <LogoTile size={38} />
+          <div className="flex flex-col leading-tight">
+            <span className="text-[13px] font-semibold tracking-[0.04em]" style={{ color: BRAND.ink }}>
+              Asnan Dental
             </span>
-            <span className="text-[10px]" style={{ color: BRAND.muted }}>
+            <span className="text-xs" style={{ color: BRAND.muted }}>
               {title}
             </span>
           </div>
@@ -85,7 +85,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                 <Link
                   key={to}
                   to={to}
-                  className="h-9 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-apple"
+                  className="h-10 px-3 rounded-full text-[13px] font-semibold flex items-center gap-1.5 transition-apple"
                   style={{
                     background: active ? BRAND.primaryDark : "transparent",
                     color: active ? "#fff" : BRAND.muted,
@@ -108,7 +108,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
             {user?.role === "admin" && (
               <Link
                 to="/admin"
-                className="h-9 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-apple"
+                className="h-10 px-3 rounded-full text-[13px] font-semibold flex items-center gap-1.5 transition-apple"
                 style={{ background: pathname.startsWith("/admin") ? BRAND.primaryDark : "transparent", color: pathname.startsWith("/admin") ? "#fff" : BRAND.muted }}
               >
                 <Shield size={13} strokeWidth={2.5} />
@@ -125,7 +125,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 pb-28 pt-5">{children}</main>
+      <main className={`${wide ? "max-w-[1440px] lg:pb-12" : "max-w-3xl"} mx-auto px-4 pb-28 pt-5`}>{children}</main>
     </div>
   );
 }

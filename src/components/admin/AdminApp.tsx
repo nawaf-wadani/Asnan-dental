@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { BarChart3, ClipboardList, Package, Users as UsersIcon, ScrollText, Download, Trash2, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BarChart3, ClipboardList, Package, Users as UsersIcon, ScrollText, Download, Trash2, Plus, ImagePlus } from "lucide-react";
+import { PATTERSON_PHOTOS } from "@shared/pattersonPhotos";
+import { compressImage } from "@/lib/photo";
+import { ItemPhoto } from "@/components/ui/ItemPhoto";
 import type { CatalogItem, Order, OrderSummary, Role, User } from "@shared/types";
 import { CATALOG_CATEGORIES } from "@shared/catalog";
 import {
@@ -7,6 +10,7 @@ import {
   ordersApi,
   usersApi,
   statsApi,
+  photosApi,
   ApiError,
   type AuditEntry,
   type DashboardStats,
@@ -228,6 +232,29 @@ function CatalogTab({ BRAND }: { BRAND: B }) {
     [items, q],
   );
 
+  const [finding, setFinding] = useState("");
+  const needPhoto = items.filter((i) => i.active && !i.photoUrl && !PATTERSON_PHOTOS[i.sku]);
+  const lookable = needPhoto.filter((i) => /^\d{8}$/.test(i.sku));
+
+  const findPhotos = async () => {
+    const todo = lookable.map((i) => i.sku);
+    if (todo.length === 0) return;
+    let found = 0;
+    try {
+      for (let i = 0; i < todo.length; i += 20) {
+        setFinding(`Looking up photos… ${Math.min(i + 20, todo.length)} of ${todo.length}`);
+        const r = await photosApi.lookup(todo.slice(i, i + 20));
+        found += r.found;
+      }
+      toast(`Found ${found} photo${found === 1 ? "" : "s"} for ${todo.length} items`, found > 0 ? "success" : "warning");
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Photo lookup failed", "error");
+    } finally {
+      setFinding("");
+      load();
+    }
+  };
+
   if (loading) return <Spinner />;
   return (
     <div className="space-y-2">
@@ -237,8 +264,17 @@ function CatalogTab({ BRAND }: { BRAND: B }) {
           <Plus size={15} />
         </Button>
       </div>
+      <div className="flex items-center gap-3 flex-wrap pb-1">
+        <Button BRAND={BRAND} variant="ghost" disabled={!!finding || lookable.length === 0} onClick={findPhotos}>
+          <ImagePlus size={15} /> {finding || `Find missing photos (${lookable.length})`}
+        </Button>
+        <span className="text-xs" style={{ color: BRAND.muted }}>
+          {needPhoto.length} item{needPhoto.length === 1 ? "" : "s"} without a photo. The lookup works for items with an 8-digit Patterson item number; for the rest, open the item and add a picture yourself.
+        </span>
+      </div>
       {filtered.slice(0, 200).map((it) => (
         <GlassCard key={it.sku} BRAND={BRAND} className="p-3 flex items-center gap-3" style={{ opacity: it.active ? 1 : 0.5 }}>
+          <ItemPhoto sku={it.sku} photoUrl={it.photoUrl} size={44} />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold truncate">{it.name}</div>
             <div className="text-[11px]" style={{ color: BRAND.muted }}>
@@ -291,15 +327,26 @@ function CatalogEditor({
     reorderThreshold: item?.reorderThreshold ?? 1,
   });
   const [busy, setBusy] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(item?.photoUrl ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const upload = async (file?: File) => {
+    if (!file) return;
+    try {
+      setPhoto(await compressImage(file));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not use that picture", "error");
+    }
+  };
 
   const save = async () => {
     setBusy(true);
     const categoryLabel = CATALOG_CATEGORIES.find((c) => c.key === f.category)?.label ?? f.category;
     try {
       if (item) {
-        await catalogApi.update(item.sku, { ...f, categoryLabel });
+        await catalogApi.update(item.sku, { ...f, categoryLabel, photoUrl: photo });
       } else {
-        await catalogApi.create({ ...f, categoryLabel });
+        await catalogApi.create({ ...f, categoryLabel, photoUrl: photo });
       }
       toast("Saved", "success");
       onSaved();
@@ -355,6 +402,37 @@ function CatalogEditor({
       }
     >
       <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <ItemPhoto sku={f.sku} photoUrl={photo} size={76} />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="text-sm font-medium" style={{ color: BRAND.ink }}>
+              Photo
+            </div>
+            <TextInput
+              BRAND={BRAND}
+              placeholder="Paste a picture link"
+              aria-label="Picture link"
+              value={photo && !photo.startsWith("data:") ? photo : ""}
+              onChange={(e) => setPhoto(e.target.value.trim() || null)}
+            />
+            <div className="flex gap-2 flex-wrap">
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="h-10 px-4 rounded-xl text-sm font-medium flex items-center gap-1.5"
+                style={{ border: `1px solid ${BRAND.borderSolid}`, color: BRAND.ink }}
+              >
+                <ImagePlus size={15} /> Upload a picture
+              </button>
+              {photo && (
+                <button type="button" onClick={() => setPhoto(null)} className="h-10 px-4 rounded-xl text-sm font-medium" style={{ color: BRAND.muted }}>
+                  Remove photo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
         <Field BRAND={BRAND} label="SKU" required>
           <TextInput BRAND={BRAND} value={f.sku} disabled={!!item} onChange={(e) => setF({ ...f, sku: e.target.value })} />
         </Field>

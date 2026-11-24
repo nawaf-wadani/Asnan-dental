@@ -49,6 +49,10 @@ export const catalogUpdateSchema = catalogCreateSchema.partial().refine(
   { message: "No fields to update" },
 );
 
+export const photoLookupSchema = z.object({
+  skus: z.array(z.string().trim().min(1).max(64)).min(1).max(25),
+});
+
 export const inventoryAdjustSchema = z
   .object({
     sku: z.string().trim().min(1).max(64),

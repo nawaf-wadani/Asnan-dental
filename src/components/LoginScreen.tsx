@@ -4,22 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
-
-/** The Asnan mark sits centred on a porcelain square; crop in so it reads as an app icon. */
-function LogoTile({ size = 56 }: { size?: number }) {
-  return (
-    <span
-      className="relative inline-block overflow-hidden flex-shrink-0"
-      style={{ width: size, height: size, borderRadius: size * 0.28, background: "#F9F8FF" }}
-    >
-      <img
-        src="/logo.jpeg"
-        alt="Asnan Dental"
-        style={{ position: "absolute", width: "230%", height: "230%", left: "-65%", top: "-65%", maxWidth: "none" }}
-      />
-    </span>
-  );
-}
+import { LogoTile } from "@/components/ui/primitives";
 
 const POINTS = ["Order supplies in a few taps", "See what is running low at a glance", "Add low-stock items straight to your order"];
 
@@ -65,7 +50,7 @@ export default function LoginScreen() {
       {/* Brand panel */}
       <aside className="flex flex-col justify-between gap-8 px-7 py-8 md:px-12 md:py-12" style={{ background: "#6862A3", color: "#fff" }}>
         <div className="flex items-center gap-3">
-          <LogoTile />
+          <LogoTile size={56} />
           <span className="text-lg font-semibold tracking-tight">Asnan Dental</span>
         </div>
 

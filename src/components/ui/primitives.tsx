@@ -7,6 +7,22 @@ export function AsnanLogo({ size = 26 }: { size?: number }) {
   return <img src="/logo.jpeg" alt="Asnan Dental" width={size * 1.5} height={size} style={{ objectFit: "contain" }} />;
 }
 
+/** The Asnan mark sits small and centred on a porcelain square; crop in so it reads as an app icon. */
+export function LogoTile({ size = 40 }: { size?: number }) {
+  return (
+    <span
+      className="relative inline-block overflow-hidden flex-shrink-0"
+      style={{ width: size, height: size, borderRadius: size * 0.28, background: "#F9F8FF" }}
+    >
+      <img
+        src="/logo.jpeg"
+        alt="Asnan Dental"
+        style={{ position: "absolute", width: "230%", height: "230%", left: "-65%", top: "-65%", maxWidth: "none" }}
+      />
+    </span>
+  );
+}
+
 export function Spinner({ label }: { label?: string }) {
   return (
     <div className="flex items-center gap-2 text-sm" style={{ opacity: 0.7 }}>

@@ -163,3 +163,13 @@ export const statsApi = {
   frequent: (limit = 12) => request<{ items: FrequentItem[] }>(`/api/frequent?limit=${limit}`),
   audit: (limit = 100, offset = 0) => request<{ entries: AuditEntry[] }>(`/api/audit?limit=${limit}&offset=${offset}`),
 };
+
+// ---- photos (admin) ----
+export const photosApi = {
+  /** Finds Patterson photos for up to 25 item numbers and saves them on the items. */
+  lookup: (skus: string[]) =>
+    request<{ found: number; notFound: string[]; skipped: string[] }>("/api/photos/lookup", {
+      method: "POST",
+      body: JSON.stringify({ skus }),
+    }),
+};

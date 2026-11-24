@@ -26,7 +26,7 @@ const MAX_QTY = 99;
 
 export default function RctOrder() {
   return (
-    <AppShell title="Endo files">
+    <AppShell title="Endo files" wide>
       <RctBody />
     </AppShell>
   );
@@ -185,7 +185,7 @@ function RctBody() {
   const openProduct = openId ? ENDO_PRODUCTS.find((p) => p.id === openId) ?? null : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-semibold" style={{ letterSpacing: "-0.01em" }}>
           Endo files
@@ -279,7 +279,7 @@ function RctBody() {
       </div>
 
       {/* Photo grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {products.map((p) => {
           const n = qtyByProduct.get(p.id) ?? 0;
           return (
