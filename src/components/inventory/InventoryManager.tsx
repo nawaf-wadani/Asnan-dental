@@ -20,6 +20,7 @@ import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { AppShell } from "@/components/AppShell";
 import { useToast } from "@/components/ui/toast";
+import { ItemPhoto } from "@/components/ui/ItemPhoto";
 import { GlassCard, QtyControl, Spinner } from "@/components/ui/primitives";
 
 export default function InventoryManager() {
@@ -267,6 +268,7 @@ function InventoryBody() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                        <ItemPhoto sku={r.sku} photoUrl={r.photoUrl} size={52} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[13px] font-semibold leading-snug flex items-center gap-1.5 flex-wrap" style={{ color: BRAND.ink }}>
                             {r.name}

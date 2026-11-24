@@ -25,6 +25,7 @@ import { readCart, clearCart } from "@/lib/cart";
 import { iconFor } from "@/data/categoryIcons";
 import { AppShell } from "@/components/AppShell";
 import { useToast } from "@/components/ui/toast";
+import { ItemPhoto } from "@/components/ui/ItemPhoto";
 import { GlassCard, Button, Field, TextInput, QtyControl, ModalShell, Spinner } from "@/components/ui/primitives";
 import {
   SpecialRequestsEditor,
@@ -513,6 +514,7 @@ function OrderFlow() {
             <GlassCard BRAND={BRAND} className="divide-y" style={{ borderColor: BRAND.border }}>
               {rows.map(({ item, qty }) => (
                 <div key={item.sku} className="p-3 flex items-center gap-3">
+                  <ItemPhoto sku={item.sku} photoUrl={item.photoUrl} size={48} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold" style={{ color: BRAND.ink }}>
                       {item.name}
@@ -651,6 +653,7 @@ function ItemRow({
         boxShadow: qty > 0 ? `inset 3px 0 0 ${BRAND.primary}` : "none",
       }}
     >
+      <ItemPhoto sku={item.sku} photoUrl={item.photoUrl} size={60} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold leading-snug" style={{ color: BRAND.ink }}>
           {item.name}
