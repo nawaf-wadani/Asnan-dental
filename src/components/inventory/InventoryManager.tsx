@@ -98,16 +98,18 @@ function StockStepper({ r, ctx }: { r: InventoryRow; ctx: RowCtx }) {
   );
 }
 
-function OrderControl({ r, ctx, needs }: { r: InventoryRow; ctx: RowCtx; needs: boolean }) {
+function OrderControl({ r, ctx, needs, showLabel = true }: { r: InventoryRow; ctx: RowCtx; needs: boolean; showLabel?: boolean }) {
   const { BRAND } = ctx;
   const inCart = ctx.cart[r.sku] ?? 0;
   if (inCart > 0) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" title="In your order">
         <QtyControl BRAND={BRAND} qty={inCart} onChange={(q) => ctx.setCartQty(r.sku, q)} compact />
-        <span className="text-xs font-medium" style={{ color: BRAND.accentDeep }}>
-          In your order
-        </span>
+        {showLabel && (
+          <span className="text-xs font-medium" style={{ color: BRAND.accentDeep }}>
+            In your order
+          </span>
+        )}
       </div>
     );
   }
@@ -175,36 +177,36 @@ function TableRow({ r, ctx }: { r: InventoryRow; ctx: RowCtx }) {
   const needs = !archived && st !== "ok";
   return (
     <tr style={{ background: !archived && st === "out" ? BRAND.dangerBg : undefined, opacity: archived ? 0.6 : 1 }}>
-      <td className="px-4 py-2.5" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
-        <div className="flex items-center gap-3 min-w-0">
-          <ItemPhoto sku={r.sku} photoUrl={r.photoUrl} size={48} />
-          <div className="min-w-0">
-            <div className="text-sm font-medium leading-snug" style={{ color: BRAND.ink }}>
+      <td className="px-4 py-3" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
+        <div className="flex items-start gap-3 min-w-0">
+          <ItemPhoto sku={r.sku} photoUrl={r.photoUrl} size={52} />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium leading-snug break-words" style={{ color: BRAND.ink }}>
               {r.name}
             </div>
-            <div className="text-xs mt-0.5" style={{ color: BRAND.muted }}>
-              {r.manufacturer ? `${r.manufacturer} · ` : ""}
-              {r.categoryLabel}
+            <div className="mt-1.5 flex items-center gap-x-2 gap-y-1 flex-wrap">
+              <StatusChip st={st} archived={archived} BRAND={BRAND} />
+              <span className="text-xs" style={{ color: BRAND.muted }}>
+                {r.manufacturer ? `${r.manufacturer} · ` : ""}
+                {r.categoryLabel}
+              </span>
+            </div>
+            <div className="text-xs mt-1" style={{ color: BRAND.muted }}>
+              Reorder at {r.reorderThreshold}
+              {ctx.isAdmin && !archived && (
+                <button className="ml-1.5 underline" style={{ color: BRAND.primaryDark }} onClick={() => ctx.editThreshold(r)}>
+                  edit
+                </button>
+              )}
             </div>
           </div>
         </div>
       </td>
-      <td className="px-3 py-2.5" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
-        <StatusChip st={st} archived={archived} BRAND={BRAND} />
-      </td>
-      <td className="px-3 py-2.5" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
+      <td className="px-3 py-3 align-top" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
         {archived ? <span className="text-base">{r.onHand}</span> : <StockStepper r={r} ctx={ctx} />}
       </td>
-      <td className="px-3 py-2.5 text-base" style={{ borderBottom: `1px solid ${BRAND.border}`, color: BRAND.ink }}>
-        {r.reorderThreshold}
-        {ctx.isAdmin && !archived && (
-          <button className="ml-2 text-xs underline" style={{ color: BRAND.primaryDark }} onClick={() => ctx.editThreshold(r)}>
-            edit
-          </button>
-        )}
-      </td>
-      <td className="px-3 py-2.5" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
-        {!archived && <OrderControl r={r} ctx={ctx} needs={needs} />}
+      <td className="px-3 py-3 align-top" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
+        {!archived && <OrderControl r={r} ctx={ctx} needs={needs} showLabel={false} />}
       </td>
       <td className="px-3 py-2.5" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
         <AdminActions r={r} ctx={ctx} />
@@ -435,7 +437,7 @@ function InventoryBody() {
     );
 
   return (
-    <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[232px_minmax(0,1fr)_340px] xl:gap-6 xl:items-start">
+    <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[208px_minmax(0,1fr)_300px] 2xl:grid-cols-[232px_minmax(0,1fr)_340px] xl:gap-6 xl:items-start">
       {/* ---------- Left: filters (wide screens) ---------- */}
       <aside className="hidden xl:block sticky top-[84px] space-y-6" aria-label="Filters">
         <nav>
@@ -557,15 +559,13 @@ function InventoryBody() {
             <table className="w-full table-fixed border-collapse">
               <colgroup>
                 <col />
-                <col style={{ width: 132 }} />
-                <col style={{ width: 160 }} />
-                <col style={{ width: 120 }} />
-                <col style={{ width: 190 }} />
-                <col style={{ width: 100 }} />
+                <col style={{ width: 150 }} />
+                <col style={{ width: 156 }} />
+                <col style={{ width: 96 }} />
               </colgroup>
               <thead>
                 <tr>
-                  {["Item", "Status", "In stock", "Reorder at", "Order", ""].map((h, i) => (
+                  {["Item", "In stock", "Order", ""].map((h, i) => (
                     <th key={i} className="px-4 py-3 text-left text-[13px] font-medium" style={{ color: BRAND.muted, borderBottom: `1px solid ${BRAND.borderSolid}` }}>
                       {h || <span className="sr-only">Admin actions</span>}
                     </th>
