@@ -130,6 +130,23 @@ function OrdersTab({ BRAND }: { BRAND: B }) {
     }
   };
 
+  const purgeOld = async () => {
+    const newest = orders[0];
+    if (!newest || orders.length < 2) return;
+    const n = orders.length - 1;
+    const ok = window.confirm(
+      `Delete ${n} older order${n === 1 ? "" : "s"} and keep only order #${newest.id}?\n\nThis cannot be undone. The deleted orders disappear from Order history, and the "Frequently ordered" list starts again from the orders that are left.\n\nTip: press Export CSV first if you want a copy.`,
+    );
+    if (!ok) return;
+    try {
+      const r = await ordersApi.removeAllButLatest();
+      toast(`${r.deleted} older order${r.deleted === 1 ? "" : "s"} deleted. Order #${r.keptId ?? newest.id} kept`, "success");
+      await load();
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Could not delete the old orders", "error");
+    }
+  };
+
   const exportCsv = () => {
     const header = "id,date,assistant,placed_by,urgency,items,email_sent,created_at";
     const lines = orders.map((o) =>
@@ -147,9 +164,16 @@ function OrdersTab({ BRAND }: { BRAND: B }) {
   if (loading) return <Spinner />;
   return (
     <div className="space-y-2">
-      <Button BRAND={BRAND} variant="ghost" onClick={exportCsv}>
-        <Download size={14} /> Export CSV
-      </Button>
+      <div className="flex gap-2 flex-wrap">
+        <Button BRAND={BRAND} variant="ghost" onClick={exportCsv}>
+          <Download size={14} /> Export CSV
+        </Button>
+        {orders.length > 1 && (
+          <Button BRAND={BRAND} variant="danger" onClick={() => void purgeOld()}>
+            <Trash2 size={14} /> Delete {orders.length - 1} older order{orders.length - 1 === 1 ? "" : "s"}, keep the latest
+          </Button>
+        )}
+      </div>
       {orders.map((o) => (
         <GlassCard key={o.id} BRAND={BRAND} className="p-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">

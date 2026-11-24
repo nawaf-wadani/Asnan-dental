@@ -615,3 +615,15 @@ export async function applyReceipt(
     return stock;
   });
 }
+
+/**
+ * Permanently deletes every order except the most recent one. Their items and special
+ * requests go with them. Returns how many orders were deleted and which one was kept.
+ */
+export async function deleteAllButLatestOrder(): Promise<{ deleted: number; keptId: number | null }> {
+  const deleted = await sql<{ id: number }>`
+    WITH keep AS (SELECT id FROM orders ORDER BY created_at DESC, id DESC LIMIT 1)
+    DELETE FROM orders WHERE id NOT IN (SELECT id FROM keep) RETURNING id`;
+  const [kept] = await sql<{ id: number }>`SELECT id FROM orders ORDER BY created_at DESC, id DESC LIMIT 1`;
+  return { deleted: deleted.length, keptId: kept?.id ?? null };
+}

@@ -8,6 +8,7 @@ import {
   getOrder,
   listOrders,
   deleteOrder,
+  deleteAllButLatestOrder,
   markOrderEmailed,
 } from "../lib/repos";
 import { audit } from "../lib/audit";
@@ -130,7 +131,16 @@ export default withErrors(async (req, context) => {
       );
     }
 
-    return methodNotAllowed(["GET", "POST"]);
+    // DELETE /api/orders?keep=latest  (admin): clear out old orders, keeping only the newest one.
+    if (req.method === "DELETE") {
+      const admin = await requireAdmin(req);
+      if (url.searchParams.get("keep") !== "latest") throw new HttpError(400, "Say which orders to keep, for example ?keep=latest");
+      const result = await deleteAllButLatestOrder();
+      await audit(admin, "order.purge", "order", result.keptId, { deleted: result.deleted, kept: result.keptId });
+      return json({ ok: true, ...result });
+    }
+
+    return methodNotAllowed(["GET", "POST", "DELETE"]);
   }
 
   // -------- single order --------

@@ -103,6 +103,9 @@ export const ordersApi = {
   place: (payload: PlaceOrderPayload) =>
     request<PlaceOrderResult>("/api/orders", { method: "POST", body: JSON.stringify(payload) }),
   remove: (id: number) => request<{ ok: true }>(`/api/orders/${id}`, { method: "DELETE" }),
+  /** Admin: permanently delete every order except the newest one. */
+  removeAllButLatest: () =>
+    request<{ ok: true; deleted: number; keptId: number | null }>("/api/orders?keep=latest", { method: "DELETE" }),
   pdfUrl: (id: number) => `/api/orders/${id}/pdf`,
 };
 
