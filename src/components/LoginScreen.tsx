@@ -1,10 +1,27 @@
-import { useState } from "react";
-import { Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, Check, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
 
+/** The Asnan mark sits centred on a porcelain square; crop in so it reads as an app icon. */
+function LogoTile({ size = 56 }: { size?: number }) {
+  return (
+    <span
+      className="relative inline-block overflow-hidden flex-shrink-0"
+      style={{ width: size, height: size, borderRadius: size * 0.28, background: "#F9F8FF" }}
+    >
+      <img
+        src="/logo.jpeg"
+        alt="Asnan Dental"
+        style={{ position: "absolute", width: "230%", height: "230%", left: "-65%", top: "-65%", maxWidth: "none" }}
+      />
+    </span>
+  );
+}
+
+const POINTS = ["Order supplies in a few taps", "See what is running low at a glance", "Add low-stock items straight to your order"];
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -12,8 +29,15 @@ export default function LoginScreen() {
   const BRAND = brandFor(dark);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [greeting, setGreeting] = useState("Welcome back");
+
+  useEffect(() => {
+    const h = new Date().getHours();
+    setGreeting(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,83 +46,126 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not sign in. Try again.");
+      setError(err instanceof ApiError ? err.message : "Could not sign in. Check your connection and try again");
     } finally {
       setBusy(false);
     }
   };
 
+  const inputStyle = {
+    background: BRAND.surfaceSolid,
+    border: `1.5px solid ${BRAND.borderSolid}`,
+    color: BRAND.ink,
+  } as const;
+  const inputCls =
+    "w-full h-14 px-4 rounded-xl text-base outline-none transition-apple focus:ring-4 focus:ring-[#80CDC4]/40 focus:border-[#6862A3]";
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-6"
-      style={{ background: BRAND.paper, color: BRAND.ink, fontFamily: "'Manrope', system-ui, sans-serif" }}
-    >
-      
-      <form
-        onSubmit={submit}
-        className="w-full max-w-sm rounded-3xl p-6 animate-slide-up"
-        style={{ background: BRAND.surfaceSolid, boxShadow: "0 24px 60px rgba(0,0,0,0.18)" }}
-      >
+    <div className="min-h-screen grid md:grid-cols-[5fr_6fr]" style={{ background: BRAND.paper, color: BRAND.ink }}>
+      {/* Brand panel */}
+      <aside className="flex flex-col justify-between gap-8 px-7 py-8 md:px-12 md:py-12" style={{ background: "#6862A3", color: "#fff" }}>
         <div className="flex items-center gap-3">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${BRAND.primary}, ${BRAND.primaryDark})` }}
-          >
-            <Lock size={22} color="#fff" />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: BRAND.muted }}>
-              Asnan Dental
-            </div>
-            <h1 className="text-2xl font-bold leading-tight mt-0.5">Supply Ordering</h1>
-          </div>
+          <LogoTile />
+          <span className="text-lg font-semibold tracking-tight">Asnan Dental</span>
         </div>
 
-        <label className="block text-[10px] uppercase tracking-[0.2em] font-bold mt-7 mb-2" style={{ color: BRAND.muted }}>
-          Email
-        </label>
-        <input
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoFocus
-          required
-          className="w-full h-12 px-4 rounded-2xl outline-none text-base"
-          style={{ background: BRAND.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)", border: `1.5px solid ${BRAND.border}`, color: BRAND.ink }}
-        />
+        <div className="max-w-md">
+          <h1 className="text-[28px] leading-[1.15] md:text-[40px] font-light" style={{ letterSpacing: "-0.01em" }}>
+            Supplies ordered, stock checked, back to your patients.
+          </h1>
+          <ul className="hidden md:block mt-8 space-y-3.5 text-base" style={{ color: "rgba(255,255,255,0.92)" }}>
+            {POINTS.map((p) => (
+              <li key={p} className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#80CDC4", color: "#1F3F3B" }}>
+                  <Check size={14} strokeWidth={3} />
+                </span>
+                {p}
+              </li>
+            ))}
+          </ul>
+        </div>
 
-        <label className="block text-[10px] uppercase tracking-[0.2em] font-bold mt-4 mb-2" style={{ color: BRAND.muted }}>
-          Password
-        </label>
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full h-12 px-4 rounded-2xl outline-none text-base"
-          style={{
-            background: BRAND.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)",
-            border: `1.5px solid ${error ? BRAND.danger : BRAND.border}`,
-            color: BRAND.ink,
-          }}
-        />
-        {error && (
-          <div className="mt-2 text-xs font-semibold" style={{ color: BRAND.danger }}>
-            {error}
+        <p className="hidden md:block text-sm" style={{ color: "rgba(255,255,255,0.78)" }}>
+          Asnan Dental · Staff supply ordering
+        </p>
+      </aside>
+
+      {/* Sign-in */}
+      <main className="flex items-center justify-center px-6 py-10 md:px-12">
+        <form onSubmit={submit} className="w-full max-w-sm">
+          <h2 className="text-[30px] font-semibold leading-tight" style={{ letterSpacing: "-0.01em" }}>
+            {greeting}
+          </h2>
+          <p className="mt-2 text-base" style={{ color: BRAND.muted }}>
+            Sign in with your clinic email.
+          </p>
+
+          <label htmlFor="email" className="block text-sm font-medium mt-8 mb-2">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="username"
+            inputMode="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoFocus
+            required
+            className={inputCls}
+            style={inputStyle}
+          />
+
+          <label htmlFor="password" className="block text-sm font-medium mt-5 mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={show ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className={`${inputCls} pr-14`}
+              style={{ ...inputStyle, borderColor: error ? BRAND.danger : BRAND.borderSolid }}
+            />
+            <button
+              type="button"
+              onClick={() => setShow((s) => !s)}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-lg flex items-center justify-center"
+              style={{ color: BRAND.muted }}
+              aria-label={show ? "Hide password" : "Show password"}
+            >
+              {show ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-5 w-full h-12 rounded-2xl text-white text-sm font-semibold transition-apple hover-scale disabled:opacity-50"
-          style={{ background: BRAND.primary, boxShadow: `0 4px 16px ${BRAND.primary}44` }}
-        >
-          {busy ? "Signing in…" : "Sign In"}
-        </button>
-      </form>
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2.5"
+              style={{ background: BRAND.dangerBg, color: BRAND.danger }}
+            >
+              <AlertCircle size={18} className="flex-shrink-0 mt-px" />
+              <span>{error}. Check your email and password and try again.</span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-6 w-full h-14 rounded-xl text-base font-semibold text-white transition-apple hover-scale disabled:opacity-60"
+            style={{ background: "#6862A3" }}
+          >
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+
+          <p className="mt-6 text-sm leading-relaxed" style={{ color: BRAND.muted }}>
+            Forgot your password? Ask Nawaf or your office manager — they can reset it from the Admin page.
+          </p>
+        </form>
+      </main>
     </div>
   );
 }

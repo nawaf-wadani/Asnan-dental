@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Search,
   Minus,
@@ -9,18 +10,21 @@ import {
   Archive,
   Trash2,
   RotateCcw,
+  ShoppingCart,
+  ArrowRight,
 } from "lucide-react";
 import { inventoryApi, catalogApi, ApiError, type InventoryRow } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { AppShell } from "@/components/AppShell";
 import { useToast } from "@/components/ui/toast";
-import { GlassCard, Spinner } from "@/components/ui/primitives";
+import { GlassCard, QtyControl, Spinner } from "@/components/ui/primitives";
 
 export default function InventoryManager() {
   return (
-    <AppShell title="Digital Inventory">
+    <AppShell title="Inventory">
       <InventoryBody />
     </AppShell>
   );
@@ -38,6 +42,7 @@ function InventoryBody() {
   const [dark] = useDarkMode();
   const BRAND = brandFor(dark);
   const toast = useToast();
+  const { cart, lines: cartLines, units: cartUnits, setQty: setCartQty, addMany, clear: clearCart } = useCart();
 
   const [rows, setRows] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +92,7 @@ function InventoryBody() {
     if (!window.confirm(`Archive "${r.name}"?\n\nIt is removed from ordering and this list but its history is kept. You can restore it later.`)) return;
     void withPending(r.sku, async () => {
       await catalogApi.archive(r.sku);
+      setCartQty(r.sku, 0);
       setRows((rs) => (showArchived ? rs.map((x) => (x.sku === r.sku ? { ...x, active: false } : x)) : rs.filter((x) => x.sku !== r.sku)));
       toast(`"${r.name}" archived`, "success");
     });
@@ -103,6 +109,7 @@ function InventoryBody() {
     if (!window.confirm(`Permanently delete "${r.name}"?\n\nThis cannot be undone. Past orders that included it are not affected. If you might want it back, use Archive instead.`)) return;
     void withPending(r.sku, async () => {
       await catalogApi.remove(r.sku);
+      setCartQty(r.sku, 0);
       setRows((rs) => rs.filter((x) => x.sku !== r.sku));
       toast(`"${r.name}" deleted`, "success");
     });
@@ -127,6 +134,11 @@ function InventoryBody() {
     return m;
   }, [filtered]);
 
+  const lowSkusNotInOrder = useMemo(
+    () => rows.filter((r) => r.active !== false && r.onHand <= r.reorderThreshold && !cart[r.sku]).map((r) => r.sku),
+    [rows, cart],
+  );
+
   const stats = useMemo(() => {
     const active = rows.filter((r) => r.active !== false);
     return {
@@ -143,28 +155,42 @@ function InventoryBody() {
       <div className="grid grid-cols-3 gap-2">
         {[
           { label: "Items", value: stats.total, color: BRAND.ink, bg: BRAND.glass },
-          { label: "Low stock", value: stats.low, color: BRAND.warning, bg: BRAND.warningBg },
-          { label: "Out", value: stats.out, color: BRAND.danger, bg: BRAND.dangerBg },
+          { label: "Running low", value: stats.low, color: BRAND.warning, bg: BRAND.warningBg },
+          { label: "Out of stock", value: stats.out, color: BRAND.danger, bg: BRAND.dangerBg },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: s.bg, border: `1px solid ${BRAND.glassBorder}` }}>
-            <div className="text-xl font-bold" style={{ color: s.color }}>
+            <div className="text-2xl font-semibold" style={{ color: s.color }}>
               {s.value}
             </div>
-            <div className="text-[9px] uppercase tracking-[0.15em] font-bold" style={{ color: s.color }}>
+            <div className="text-xs font-medium" style={{ color: s.color }}>
               {s.label}
             </div>
           </div>
         ))}
       </div>
 
+      {lowSkusNotInOrder.length > 0 && (
+        <button
+          onClick={() => {
+            addMany(lowSkusNotInOrder);
+            toast(`${lowSkusNotInOrder.length} low-stock item${lowSkusNotInOrder.length === 1 ? "" : "s"} added to your order`, "success");
+          }}
+          className="w-full min-h-12 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-apple hover-scale"
+          style={{ background: BRAND.butter, color: "#4A3F00", border: "1px solid rgba(74,63,0,0.18)" }}
+        >
+          <ShoppingCart size={16} />
+          Add all {lowSkusNotInOrder.length} low-stock item{lowSkusNotInOrder.length === 1 ? "" : "s"} to order
+        </button>
+      )}
+
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: BRAND.muted }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search inventory…"
-          className="w-full h-10 pl-9 pr-4 rounded-xl text-sm outline-none"
-          style={{ background: BRAND.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${BRAND.border}`, color: BRAND.ink }}
+          placeholder="Search inventory"
+          className="w-full h-11 pl-9 pr-4 rounded-xl text-sm outline-none"
+          style={{ background: BRAND.surfaceSolid, border: `1px solid ${BRAND.borderSolid}`, color: BRAND.ink }}
         />
       </div>
 
@@ -173,14 +199,14 @@ function InventoryBody() {
           <button
             key={m}
             onClick={() => setLowOnly(m === "low")}
-            className="flex-1 h-8 rounded-lg text-xs font-semibold"
+            className="flex-1 h-10 rounded-lg text-xs font-semibold"
             style={{
-              background: (m === "low") === lowOnly ? (m === "low" ? BRAND.warning : BRAND.primary) : "transparent",
+              background: (m === "low") === lowOnly ? (m === "low" ? BRAND.warning : BRAND.primaryDark) : "transparent",
               color: (m === "low") === lowOnly ? "#fff" : BRAND.muted,
               border: `1px solid ${BRAND.border}`,
             }}
           >
-            {m === "low" ? "Low stock only" : "All items"}
+            {m === "low" ? "Running low only" : "All items"}
           </button>
         ))}
         {isAdmin && (
@@ -190,10 +216,10 @@ function InventoryBody() {
               setShowArchived(next);
               reload(next);
             }}
-            className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+            className="h-10 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
             style={{
               background: showArchived ? BRAND.ink : "transparent",
-              color: showArchived ? "#fff" : BRAND.muted,
+              color: showArchived ? BRAND.paper : BRAND.muted,
               border: `1px solid ${BRAND.border}`,
             }}
           >
@@ -207,14 +233,14 @@ function InventoryBody() {
         const lowCount = items.filter((r) => r.active !== false && r.onHand <= r.reorderThreshold).length;
         return (
           <GlassCard key={label} BRAND={BRAND} className="overflow-hidden">
-            <button onClick={() => setExpanded(open && !search.trim() && !lowOnly ? null : label)} className="w-full px-4 py-3 flex items-center justify-between" style={{ color: BRAND.ink }}>
+            <button onClick={() => setExpanded(open && !search.trim() && !lowOnly ? null : label)} className="w-full px-4 py-3.5 flex items-center justify-between" style={{ color: BRAND.ink }}>
               <span className="flex items-center gap-2">
                 <span className="text-sm font-semibold">{label}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold" style={{ background: BRAND.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", color: BRAND.muted }}>
+                <span className="text-[11px] px-1.5 py-0.5 rounded-md font-medium" style={{ background: BRAND.border, color: BRAND.muted }}>
                   {items.length}
                 </span>
                 {lowCount > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold" style={{ background: BRAND.warningBg, color: BRAND.warning }}>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded-md font-semibold" style={{ background: BRAND.warningBg, color: BRAND.warning }}>
                     {lowCount} low
                   </span>
                 )}
@@ -222,128 +248,163 @@ function InventoryBody() {
               {open ? <ChevronUp size={16} style={{ color: BRAND.muted }} /> : <ChevronDown size={16} style={{ color: BRAND.muted }} />}
             </button>
             {open && (
-              <div className="px-3 pb-3 space-y-1.5">
+              <div className="px-3 pb-3 space-y-2">
                 {items.map((r) => {
                   const archived = r.active === false;
                   const st = status(r);
+                  const needs = !archived && st !== "ok";
+                  const inCart = cart[r.sku] ?? 0;
                   const dotColor = archived ? BRAND.muted : st === "out" ? BRAND.danger : st === "low" ? BRAND.warning : BRAND.success;
                   return (
                     <div
                       key={r.sku}
-                      className="rounded-xl p-3 flex items-center gap-3"
+                      className="rounded-xl p-3"
                       style={{
-                        background: BRAND.isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
-                        border: `1px solid ${BRAND.border}`,
+                        background: BRAND.surfaceSolid,
+                        border: `1px solid ${needs ? (st === "out" ? BRAND.danger : BRAND.warning) + "55" : BRAND.border}`,
                         opacity: archived ? 0.55 : 1,
                       }}
                     >
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate flex items-center gap-1.5" style={{ color: BRAND.ink }}>
-                          {r.name}
-                          {archived && (
-                            <span className="text-[9px] uppercase tracking-wide px-1 py-0.5 rounded" style={{ background: BRAND.isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", color: BRAND.muted }}>
-                              Archived
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px]" style={{ color: BRAND.muted }}>
-                          {r.manufacturer} · reorder at {r.reorderThreshold}
-                          {isAdmin && !archived && (
-                            <>
-                              {" "}
-                              <button
-                                className="underline"
-                                onClick={() => {
-                                  const v = window.prompt(`Reorder threshold for "${r.name}"`, String(r.reorderThreshold));
-                                  const n = v == null ? NaN : parseInt(v, 10);
-                                  if (Number.isFinite(n) && n >= 0) void adjust(r.sku, { reorderThreshold: n });
-                                }}
-                              >
-                                edit
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {archived ? (
-                        isAdmin && (
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <button
-                              disabled={pending[r.sku]}
-                              onClick={() => void restoreItem(r)}
-                              className="h-8 px-2.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 disabled:opacity-40"
-                              style={{ background: `${BRAND.primary}22`, color: BRAND.primary }}
-                            >
-                              <RotateCcw size={12} /> Restore
-                            </button>
-                            <button
-                              disabled={pending[r.sku]}
-                              onClick={() => removeItem(r)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-40"
-                              style={{ background: BRAND.dangerBg, color: BRAND.danger }}
-                              aria-label="Delete permanently"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                      <div className="flex items-center gap-3">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold leading-snug flex items-center gap-1.5 flex-wrap" style={{ color: BRAND.ink }}>
+                            {r.name}
+                            {archived && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium" style={{ background: BRAND.border, color: BRAND.muted }}>
+                                Archived
+                              </span>
+                            )}
+                            {needs && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: st === "out" ? BRAND.dangerBg : BRAND.warningBg, color: st === "out" ? BRAND.danger : BRAND.warning }}>
+                                {st === "out" ? "Out of stock" : "Running low"}
+                              </span>
+                            )}
                           </div>
-                        )
-                      ) : (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button
-                            disabled={pending[r.sku]}
-                            onClick={() => adjust(r.sku, { delta: -1 })}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-40"
-                            style={{ background: BRAND.isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", color: BRAND.ink }}
-                            aria-label="Use one"
-                          >
-                            <Minus size={13} strokeWidth={2.5} />
-                          </button>
-                          <button
-                            className="w-10 text-center text-sm font-bold"
-                            style={{ color: BRAND.ink }}
-                            onClick={() => {
-                              const v = window.prompt(`Set count for "${r.name}"`, String(r.onHand));
-                              const n = v == null ? NaN : parseInt(v, 10);
-                              if (Number.isFinite(n) && n >= 0) void adjust(r.sku, { onHand: n });
-                            }}
-                            title="Tap to set exact count"
-                          >
-                            {r.onHand}
-                          </button>
-                          <button
-                            disabled={pending[r.sku]}
-                            onClick={() => adjust(r.sku, { delta: 1 })}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-40"
-                            style={{ background: `${BRAND.primary}22`, color: BRAND.primary }}
-                            aria-label="Add one"
-                          >
-                            <Plus size={13} strokeWidth={2.5} />
-                          </button>
-                          {isAdmin && (
-                            <>
+                          <div className="text-[11px] mt-0.5" style={{ color: BRAND.muted }}>
+                            {r.manufacturer} · reorder at {r.reorderThreshold}
+                            {isAdmin && !archived && (
+                              <>
+                                {" "}
+                                <button
+                                  className="underline"
+                                  onClick={() => {
+                                    const v = window.prompt(`Reorder threshold for "${r.name}"`, String(r.reorderThreshold));
+                                    const n = v == null ? NaN : parseInt(v, 10);
+                                    if (Number.isFinite(n) && n >= 0) void adjust(r.sku, { reorderThreshold: n });
+                                  }}
+                                >
+                                  edit
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {archived ? (
+                          isAdmin && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               <button
                                 disabled={pending[r.sku]}
-                                onClick={() => archiveItem(r)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-40"
-                                style={{ background: BRAND.isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", color: BRAND.muted }}
-                                aria-label="Archive item"
-                                title="Archive (reversible)"
+                                onClick={() => void restoreItem(r)}
+                                className="h-9 px-3 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-40"
+                                style={{ background: `${BRAND.primary}28`, color: BRAND.primaryDark }}
                               >
-                                <Archive size={13} />
+                                <RotateCcw size={12} /> Restore
                               </button>
                               <button
                                 disabled={pending[r.sku]}
                                 onClick={() => removeItem(r)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-40"
+                                className="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-40"
                                 style={{ background: BRAND.dangerBg, color: BRAND.danger }}
+                                aria-label="Delete permanently"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              disabled={pending[r.sku]}
+                              onClick={() => adjust(r.sku, { delta: -1 })}
+                              className="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-40"
+                              style={{ background: BRAND.border, color: BRAND.ink }}
+                              aria-label="Use one"
+                            >
+                              <Minus size={14} strokeWidth={2.5} />
+                            </button>
+                            <button
+                              className="w-10 text-center text-base font-semibold"
+                              style={{ color: BRAND.ink }}
+                              onClick={() => {
+                                const v = window.prompt(`Set count for "${r.name}"`, String(r.onHand));
+                                const n = v == null ? NaN : parseInt(v, 10);
+                                if (Number.isFinite(n) && n >= 0) void adjust(r.sku, { onHand: n });
+                              }}
+                              title="Tap to set the exact count"
+                            >
+                              {r.onHand}
+                            </button>
+                            <button
+                              disabled={pending[r.sku]}
+                              onClick={() => adjust(r.sku, { delta: 1 })}
+                              className="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-40"
+                              style={{ background: `${BRAND.primary}28`, color: BRAND.primaryDark }}
+                              aria-label="Add one to stock"
+                            >
+                              <Plus size={14} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {!archived && (
+                        <div className="flex items-center justify-between gap-2 mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${BRAND.border}` }}>
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <QtyControl BRAND={BRAND} qty={inCart} onChange={(q) => setCartQty(r.sku, q)} compact />
+                              <span className="text-xs font-medium" style={{ color: BRAND.accentDeep }}>
+                                In your order
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setCartQty(r.sku, 1)}
+                              className="h-10 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-apple hover-scale"
+                              style={{
+                                background: needs ? BRAND.primaryDark : "transparent",
+                                color: needs ? "#fff" : BRAND.primaryDark,
+                                border: `1.5px solid ${BRAND.primaryDark}`,
+                              }}
+                            >
+                              <ShoppingCart size={14} /> Add to order
+                            </button>
+                          )}
+
+                          {isAdmin && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                disabled={pending[r.sku]}
+                                onClick={() => archiveItem(r)}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-40"
+                                style={{ color: BRAND.muted }}
+                                aria-label="Archive item"
+                                title="Archive (can be restored)"
+                              >
+                                <Archive size={15} />
+                              </button>
+                              <button
+                                disabled={pending[r.sku]}
+                                onClick={() => removeItem(r)}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-40"
+                                style={{ color: BRAND.danger }}
                                 aria-label="Delete item permanently"
                                 title="Delete permanently"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={15} />
                               </button>
-                            </>
+                            </div>
                           )}
                         </div>
                       )}
@@ -360,16 +421,39 @@ function InventoryBody() {
         <div className="text-center py-12">
           <Package size={28} style={{ color: BRAND.muted, margin: "0 auto 8px" }} />
           <p className="text-sm" style={{ color: BRAND.muted }}>
-            {lowOnly ? "Nothing is low on stock." : showArchived ? "No archived items." : "No items match your search."}
+            {lowOnly ? "Nothing is running low." : showArchived ? "No archived items." : "No items match your search."}
           </p>
         </div>
       )}
 
       {isAdmin && (
-        <p className="text-[11px] text-center" style={{ color: BRAND.muted }}>
-          Admins: <strong>Archive</strong> hides an item but keeps it (reversible). <strong>Delete</strong> removes it for
-          good. Add new items in Admin → Catalog.
+        <p className="text-xs text-center leading-relaxed" style={{ color: BRAND.muted }}>
+          Archive hides an item but keeps it, and you can restore it later. Delete removes it for good. Add new items under Admin → Catalog.
         </p>
+      )}
+
+      {cartLines > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-4 pt-3" style={{ background: `linear-gradient(to top, ${BRAND.paper} 65%, transparent)` }}>
+          <div className="max-w-3xl mx-auto flex gap-2">
+            <button
+              onClick={() => {
+                clearCart();
+                toast("Order list cleared", "info");
+              }}
+              className="h-14 px-5 rounded-2xl text-sm font-semibold"
+              style={{ background: BRAND.surfaceSolid, color: BRAND.muted, border: `1px solid ${BRAND.borderSolid}` }}
+            >
+              Clear
+            </button>
+            <Link
+              to="/"
+              className="flex-1 h-14 rounded-2xl text-base font-semibold text-white flex items-center justify-center gap-2 transition-apple hover-scale"
+              style={{ background: BRAND.primaryDark, boxShadow: `0 6px 18px ${BRAND.primaryDark}55` }}
+            >
+              Go to order · {cartUnits} item{cartUnits === 1 ? "" : "s"} <ArrowRight size={18} />
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );

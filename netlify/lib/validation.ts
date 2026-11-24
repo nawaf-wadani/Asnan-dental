@@ -92,6 +92,8 @@ const rctRow = z.object({
   taper: z.string().trim().min(1).max(80),
   length: z.string().trim().min(1).max(40),
   qty: z.number().int().min(1).max(99),
+  /** Dentsply Sirona item code, when the line was picked from the photo catalogue. */
+  code: z.string().trim().max(40).optional(),
 });
 
 export const endoOrderSchema = z.object({

@@ -38,7 +38,7 @@ export default withErrors(async (req) => {
     "",
     "FILES ORDERED",
     "-------------",
-    ...input.files.map((f) => `  ${f.qty}x  ${f.type} — ${f.taper} — ${f.length}`),
+    ...input.files.map((f) => `  ${f.qty}x  ${f.type} — ${f.taper} — ${f.length}${f.code ? ` [${f.code}]` : ""}`),
     ...(input.accessories.length ? ["", "ACCESSORIES", "-----------", ...input.accessories.map((a) => `  • ${a}`)] : []),
     ...(input.notes.trim() ? ["", `NOTES: ${input.notes.trim()}`] : []),
   ].join("\n");

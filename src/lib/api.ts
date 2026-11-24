@@ -111,7 +111,7 @@ export interface EndoOrderPayload {
   dentist: string;
   orderDate: string;
   urgency: "Routine" | "Priority" | "Urgent";
-  files: { type: string; taper: string; length: string; qty: number }[];
+  files: { type: string; taper: string; length: string; qty: number; code?: string }[];
   accessories: string[];
   notes?: string;
 }

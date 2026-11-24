@@ -21,6 +21,7 @@ import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { todayIso, downloadBase64, classNames } from "@/lib/format";
 import { safeGet, safeSet, safeDelete, STORAGE_KEYS } from "@/lib/storage";
+import { readCart, clearCart } from "@/lib/cart";
 import { iconFor } from "@/data/categoryIcons";
 import { AppShell } from "@/components/AppShell";
 import { useToast } from "@/components/ui/toast";
@@ -110,7 +111,7 @@ function OrderFlow() {
         if (
           draft &&
           draft.step &&
-          draft.step !== "intro" &&
+          (draft.step !== "intro" || Object.keys(draft.quantities ?? {}).length > 0) &&
           (Object.keys(draft.quantities ?? {}).length > 0 || (draft.specials ?? []).some((s) => s.text))
         ) {
           setAssistantName(draft.assistantName || user?.displayName || "");
@@ -121,6 +122,18 @@ function OrderFlow() {
           setSpecials(draft.specials?.length ? draft.specials : [newSpecialRequest()]);
           setStep(draft.step);
           toast("Draft from your last session restored", "info");
+        }
+
+        // Items added from the Inventory page's "Add to order" buttons.
+        const incoming = Object.entries(readCart()).filter(([sku]) => items.some((i) => i.sku === sku));
+        if (incoming.length > 0) {
+          setQuantities((prev) => {
+            const next = { ...prev };
+            for (const [sku, qty] of incoming) next[sku] = Math.min(9999, (next[sku] ?? 0) + qty);
+            return next;
+          });
+          clearCart();
+          toast(`${incoming.length} item${incoming.length === 1 ? "" : "s"} from Inventory added to your order`, "success");
         }
       } catch (err) {
         toast(err instanceof ApiError ? err.message : "Could not load the catalog", "error");
@@ -134,7 +147,8 @@ function OrderFlow() {
 
   // ---- autosave draft ----
   useEffect(() => {
-    if (!hydratedRef.current || step === "intro" || step === "done") return;
+    if (!hydratedRef.current || step === "done") return;
+    if (step === "intro" && Object.keys(quantities).length === 0) return;
     const t = setTimeout(() => {
       safeSet(STORAGE_KEYS.draft, { assistantName, orderDate, urgency, notes, quantities, specials, step } as DraftShape);
     }, 400);
@@ -232,6 +246,29 @@ function OrderFlow() {
             Stock the operatory.
           </h1>
         </div>
+
+        {lineCount > 0 && (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: BRAND.butter, color: "#4A3F00", border: "1px solid rgba(74,63,0,0.16)" }}
+          >
+            <ShoppingCart size={20} className="flex-shrink-0" />
+            <div className="flex-1 text-sm leading-snug">
+              <strong>
+                {lineCount} item{lineCount === 1 ? "" : "s"}
+              </strong>{" "}
+              already in your order ({totalUnits} unit{totalUnits === 1 ? "" : "s"}).
+            </div>
+            <button
+              disabled={!canProceedIntro}
+              onClick={() => setStep("review")}
+              className="h-10 px-4 rounded-full text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: BRAND.primaryDark }}
+            >
+              Review order
+            </button>
+          </div>
+        )}
 
         <GlassCard BRAND={BRAND} className="p-5 space-y-4">
           <Field BRAND={BRAND} label="Assistant's name" required>

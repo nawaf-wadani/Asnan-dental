@@ -2,13 +2,21 @@
  * Single source of truth for brand colours. Plain data only (no React / DOM),
  * so both the client UI and the server-side PDF generator can import it.
  *
- * To rebrand: change the hex values here. Everything downstream follows.
+ * Asnan Dental palette: Paisley Purple (#897BB9) with its deep tone (#6862A3),
+ * Blue Frosting teal (#80CDC4) as the accent, porcelain (#F9F8FF) as the
+ * ground and butter (#FFFCC5) as a rare highlight. Neutrals are derived from
+ * the purple rather than grey/black.
+ *
+ * To rebrand: change the values here. Everything downstream follows.
  */
 
 export interface BrandPalette {
   primary: string;
   primaryDark: string;
   primaryDeep: string;
+  accent: string;
+  accentDeep: string;
+  butter: string;
   ink: string;
   paper: string;
   surface: string;
@@ -30,24 +38,27 @@ export interface BrandPalette {
 
 export const BRAND_LIGHT: BrandPalette = {
   primary: "#897BB9",
-  primaryDark: "#6B5E9E",
-  primaryDeep: "#564B82",
-  ink: "#1D1D1F",
-  paper: "#F5F5F7",
-  surface: "rgba(255,255,255,0.72)",
+  primaryDark: "#6862A3",
+  primaryDeep: "#4F4985",
+  accent: "#80CDC4",
+  accentDeep: "#2B7F76",
+  butter: "#FFFCC5",
+  ink: "#2A2543",
+  paper: "#F9F8FF",
+  surface: "rgba(255,255,255,0.78)",
   surfaceSolid: "#FFFFFF",
-  muted: "#86868B",
-  border: "rgba(0,0,0,0.08)",
-  borderSolid: "#E5E5EA",
-  danger: "#FF3B30",
-  dangerBg: "rgba(255,59,48,0.08)",
-  success: "#34C759",
-  successBg: "rgba(52,199,89,0.08)",
-  warning: "#FF9500",
-  warningBg: "rgba(255,149,0,0.1)",
-  glass: "rgba(255,255,255,0.6)",
-  glassBorder: "rgba(255,255,255,0.3)",
-  cardShadow: "0 2px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
+  muted: "#6B6684",
+  border: "rgba(42,37,67,0.10)",
+  borderSolid: "#E4E0F2",
+  danger: "#D92D20",
+  dangerBg: "rgba(217,45,32,0.08)",
+  success: "#2E9E6B",
+  successBg: "rgba(46,158,107,0.09)",
+  warning: "#B86E00",
+  warningBg: "rgba(255,196,80,0.22)",
+  glass: "rgba(255,255,255,0.72)",
+  glassBorder: "rgba(137,123,185,0.20)",
+  cardShadow: "0 1px 3px rgba(42,37,67,0.06), 0 8px 24px rgba(104,98,163,0.08)",
   isDark: false,
 };
 
@@ -55,22 +66,25 @@ export const BRAND_DARK: BrandPalette = {
   primary: "#A99BD4",
   primaryDark: "#BDB1DE",
   primaryDeep: "#D1C8E8",
-  ink: "#F5F5F7",
-  paper: "#000000",
-  surface: "rgba(28,28,30,0.72)",
-  surfaceSolid: "#1C1C1E",
-  muted: "#98989D",
-  border: "rgba(255,255,255,0.08)",
-  borderSolid: "#38383A",
-  danger: "#FF453A",
-  dangerBg: "rgba(255,69,58,0.12)",
-  success: "#30D158",
-  successBg: "rgba(48,209,88,0.12)",
-  warning: "#FF9F0A",
-  warningBg: "rgba(255,159,10,0.12)",
-  glass: "rgba(28,28,30,0.6)",
-  glassBorder: "rgba(255,255,255,0.06)",
-  cardShadow: "0 2px 8px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.3)",
+  accent: "#80CDC4",
+  accentDeep: "#80CDC4",
+  butter: "#FFFCC5",
+  ink: "#F1EEFA",
+  paper: "#13111F",
+  surface: "rgba(29,26,46,0.78)",
+  surfaceSolid: "#1D1A2E",
+  muted: "#A9A3C2",
+  border: "rgba(241,238,250,0.10)",
+  borderSolid: "#34304D",
+  danger: "#FF6B5E",
+  dangerBg: "rgba(255,107,94,0.14)",
+  success: "#4CC38A",
+  successBg: "rgba(76,195,138,0.14)",
+  warning: "#FFB84D",
+  warningBg: "rgba(255,184,77,0.14)",
+  glass: "rgba(29,26,46,0.70)",
+  glassBorder: "rgba(169,155,212,0.16)",
+  cardShadow: "0 1px 3px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35)",
   isDark: true,
 };
 
@@ -80,8 +94,8 @@ export const PDF_COLORS = {
   primaryDeep: BRAND_LIGHT.primaryDeep,
   ink: BRAND_LIGHT.ink,
   muted: BRAND_LIGHT.muted,
-  border: "#E5E5EA",
-  rule: "#F0F0F2",
-  warning: "#B25A00",
+  border: "#E4E0F2",
+  rule: "#EEEBF8",
+  warning: "#B86E00",
   danger: "#C4302B",
 } as const;

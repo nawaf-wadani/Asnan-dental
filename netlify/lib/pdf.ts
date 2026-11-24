@@ -29,7 +29,7 @@ export interface EndoPdfInput {
   urgency: string;
   notes: string;
   createdByEmail: string;
-  files: { type: string; taper: string; length: string; qty: number }[];
+  files: { type: string; taper: string; length: string; qty: number; code?: string }[];
   accessories: string[];
 }
 
@@ -228,7 +228,7 @@ export async function buildEndoOrderPdf(input: EndoPdfInput): Promise<Buffer> {
 
   sectionTitle(doc, "Files Ordered");
   for (const f of input.files) {
-    itemRow(doc, f.type, `${f.taper}  ·  ${f.length}`, String(f.qty));
+    itemRow(doc, f.type, [f.taper, f.length, f.code ? `Item ${f.code}` : ""].filter(Boolean).join("  ·  "), String(f.qty));
   }
 
   if (input.accessories.length) {

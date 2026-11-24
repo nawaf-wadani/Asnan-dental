@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Moon, Sun, LogOut, Package, Home, CircleDot, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { brandFor } from "@/lib/brand";
 import { useDarkMode } from "@/lib/useDarkMode";
 import { AsnanLogo, Spinner } from "@/components/ui/primitives";
@@ -48,12 +49,13 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   const { user, logout } = useAuth();
   const [dark, toggleDark] = useDarkMode();
   const BRAND = brandFor(dark);
+  const { lines: cartLines } = useCart();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <div
       className="min-h-screen"
-      style={{ background: BRAND.paper, color: BRAND.ink, fontFamily: "'Manrope', system-ui, sans-serif" }}
+      style={{ background: BRAND.paper, color: BRAND.ink, fontFamily: "'Alexandria', system-ui, sans-serif" }}
     >
       
       <header
@@ -85,12 +87,21 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
                   to={to}
                   className="h-9 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-apple"
                   style={{
-                    background: active ? BRAND.primary : "transparent",
+                    background: active ? BRAND.primaryDark : "transparent",
                     color: active ? "#fff" : BRAND.muted,
                   }}
                 >
                   <Icon size={13} strokeWidth={2.5} />
                   <span className="hidden sm:inline">{label}</span>
+                  {to === "/" && cartLines > 0 && (
+                    <span
+                      className="min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+                      style={{ background: active ? "#fff" : BRAND.primaryDark, color: active ? BRAND.primaryDark : "#fff" }}
+                      aria-label={`${cartLines} in your order list`}
+                    >
+                      {cartLines}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -98,7 +109,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
               <Link
                 to="/admin"
                 className="h-9 px-2.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-apple"
-                style={{ background: pathname.startsWith("/admin") ? BRAND.primary : "transparent", color: pathname.startsWith("/admin") ? "#fff" : BRAND.muted }}
+                style={{ background: pathname.startsWith("/admin") ? BRAND.primaryDark : "transparent", color: pathname.startsWith("/admin") ? "#fff" : BRAND.muted }}
               >
                 <Shield size={13} strokeWidth={2.5} />
                 <span className="hidden sm:inline">Admin</span>

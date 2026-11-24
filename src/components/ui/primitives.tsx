@@ -57,7 +57,7 @@ export function Button({
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const bg =
     variant === "primary"
-      ? BRAND.primary
+      ? BRAND.primaryDark
       : variant === "danger"
         ? BRAND.danger
         : variant === "success"
@@ -100,12 +100,12 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-[0.2em] font-bold mb-2" style={{ color: BRAND.muted }}>
-        {label} {required && <span style={{ color: BRAND.primary }}>*</span>}
+      <span className="block text-sm font-medium mb-2" style={{ color: BRAND.ink }}>
+        {label} {required && <span style={{ color: BRAND.primaryDark }}>*</span>}
       </span>
       {children}
       {hint && (
-        <span className="block text-[10px] mt-1.5" style={{ color: BRAND.muted }}>
+        <span className="block text-xs mt-1.5" style={{ color: BRAND.muted }}>
           {hint}
         </span>
       )}
@@ -149,7 +149,7 @@ export function QtyControl({
       <button
         onClick={() => onChange(1)}
         className={`${btn} ${size} rounded-full text-white flex items-center justify-center transition-apple hover-scale`}
-        style={{ background: BRAND.primary, boxShadow: `0 2px 8px ${BRAND.primary}44` }}
+        style={{ background: BRAND.primaryDark, boxShadow: `0 2px 8px ${BRAND.primaryDark}44` }}
         aria-label="Add"
       >
         <Plus size={compact ? 16 : 18} strokeWidth={2.5} />
