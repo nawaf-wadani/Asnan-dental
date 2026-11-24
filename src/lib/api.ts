@@ -182,3 +182,15 @@ export const photosFromPageApi = {
       body: JSON.stringify({ url }),
     }),
 };
+
+export interface RecentItem {
+  sku: string;
+  qty: number;
+  orderId: number;
+  createdAt: string;
+  assistantName: string;
+}
+export const recentApi = {
+  /** The latest order line for every item ordered in the last `days` days. */
+  items: (days = 14) => request<{ days: number; items: RecentItem[] }>(`/api/recent-items?days=${days}`),
+};

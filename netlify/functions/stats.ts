@@ -2,11 +2,17 @@ import type { Config } from "@netlify/functions";
 import { withErrors } from "../lib/handler";
 import { json, methodNotAllowed } from "../lib/http";
 import { requireAuth, requireAdmin } from "../lib/auth";
-import { dashboardStats, frequentSkus, listCatalog, listAudit } from "../lib/repos";
+import { dashboardStats, frequentSkus, listCatalog, listAudit, recentlyOrdered } from "../lib/repos";
 
 export default withErrors(async (req) => {
   const path = new URL(req.url).pathname;
   if (req.method !== "GET") return methodNotAllowed(["GET"]);
+
+  if (path.endsWith("/recent-items")) {
+    await requireAuth(req);
+    const days = Math.min(90, Math.max(1, Number(new URL(req.url).searchParams.get("days")) || 14));
+    return json({ days, items: await recentlyOrdered(days) });
+  }
 
   if (path.endsWith("/frequent")) {
     await requireAuth(req);
@@ -37,5 +43,5 @@ export default withErrors(async (req) => {
 });
 
 export const config: Config = {
-  path: ["/api/stats", "/api/frequent", "/api/audit"],
+  path: ["/api/stats", "/api/frequent", "/api/audit", "/api/recent-items"],
 };

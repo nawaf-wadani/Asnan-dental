@@ -14,7 +14,8 @@ import {
   ArrowRight,
   X,
 } from "lucide-react";
-import { inventoryApi, catalogApi, ApiError, type InventoryRow } from "@/lib/api";
+import { inventoryApi, catalogApi, recentApi, ApiError, type InventoryRow, type RecentItem } from "@/lib/api";
+import { timeAgo } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { brandFor, type BrandPalette } from "@/lib/brand";
@@ -32,7 +33,10 @@ export default function InventoryManager() {
   );
 }
 
-type StatusFilter = "all" | "low" | "out" | "arch";
+type StatusFilter = "all" | "low" | "out" | "need" | "arch";
+
+/** An order placed in the last this-many days counts as "recently ordered". */
+const RECENT_DAYS = 14;
 
 function stockStatus(row: InventoryRow): "out" | "low" | "ok" {
   if (row.onHand === 0) return "out";
@@ -45,6 +49,7 @@ interface RowCtx {
   BRAND: BrandPalette;
   isAdmin: boolean;
   cart: Record<string, number>;
+  recent: Record<string, RecentItem>;
   pending: Record<string, boolean>;
   adjust: (sku: string, patch: { delta?: number; onHand?: number; reorderThreshold?: number }) => Promise<void>;
   setCartQty: (sku: string, qty: number) => void;
@@ -66,6 +71,33 @@ function StatusChip({ st, archived, BRAND }: { st: "out" | "low" | "ok"; archive
     <span className="inline-flex items-center h-7 px-3 rounded-full text-xs font-semibold whitespace-nowrap" style={{ background: c.bg, color: c.fg }}>
       {c.label}
     </span>
+  );
+}
+
+/** Tells you whether this item is already in your order list or was ordered recently. */
+function OrderBadges({ r, ctx }: { r: InventoryRow; ctx: RowCtx }) {
+  const { BRAND } = ctx;
+  const inCart = ctx.cart[r.sku] ?? 0;
+  const rec = ctx.recent[r.sku];
+  if (r.active === false || (!inCart && !rec)) return null;
+  const chip = "inline-flex items-center h-7 px-3 rounded-full text-xs font-semibold whitespace-nowrap";
+  return (
+    <>
+      {inCart > 0 && (
+        <span className={chip} style={{ background: `${BRAND.accent}40`, color: BRAND.accentDeep }}>
+          In your order · {inCart}
+        </span>
+      )}
+      {rec && (
+        <span
+          className={chip}
+          style={{ background: BRAND.butter, color: "#4A3F00" }}
+          title={`Order #${rec.orderId} by ${rec.assistantName}, ${rec.qty} ordered`}
+        >
+          Ordered {timeAgo(rec.createdAt)} · {rec.qty}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -186,6 +218,7 @@ function TableRow({ r, ctx }: { r: InventoryRow; ctx: RowCtx }) {
             </div>
             <div className="mt-1.5 flex items-center gap-x-2 gap-y-1 flex-wrap">
               <StatusChip st={st} archived={archived} BRAND={BRAND} />
+              <OrderBadges r={r} ctx={ctx} />
               <span className="text-xs" style={{ color: BRAND.muted }}>
                 {r.manufacturer ? `${r.manufacturer} · ` : ""}
                 {r.categoryLabel}
@@ -238,6 +271,7 @@ function MobileCard({ r, ctx }: { r: InventoryRow; ctx: RowCtx }) {
           </div>
           <div className="mt-1 flex items-center gap-2 flex-wrap">
             <StatusChip st={st} archived={archived} BRAND={BRAND} />
+            <OrderBadges r={r} ctx={ctx} />
             <span className="text-[11px]" style={{ color: BRAND.muted }}>
               {r.manufacturer ? `${r.manufacturer} · ` : ""}reorder at {r.reorderThreshold}
               {ctx.isAdmin && !archived && (
@@ -277,6 +311,15 @@ function InventoryBody() {
   const [category, setCategory] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, boolean>>({});
+  const [recent, setRecent] = useState<Record<string, RecentItem>>({});
+
+  useEffect(() => {
+    // Which items were ordered lately. Not essential, so a failure just hides the badges.
+    recentApi
+      .items(RECENT_DAYS)
+      .then((r) => setRecent(Object.fromEntries(r.items.map((i) => [i.sku, i]))))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     inventoryApi
@@ -314,6 +357,7 @@ function InventoryBody() {
     BRAND,
     isAdmin,
     cart,
+    recent,
     pending,
     adjust,
     setCartQty,
@@ -356,14 +400,18 @@ function InventoryBody() {
   const live = useMemo(() => rows.filter((r) => r.active !== false), [rows]);
   const archivedCount = rows.length - live.length;
 
+  /** Low or out of stock, and not in the order list and not ordered recently: still needs ordering. */
+  const needsOrdering = useCallback((r: InventoryRow) => stockStatus(r) !== "ok" && !cart[r.sku] && !recent[r.sku], [cart, recent]);
+
   const counts = useMemo(
     () => ({
       all: live.length,
       low: live.filter((r) => stockStatus(r) === "low").length,
       out: live.filter((r) => stockStatus(r) === "out").length,
+      need: live.filter(needsOrdering).length,
       arch: archivedCount,
     }),
-    [live, archivedCount],
+    [live, archivedCount, needsOrdering],
   );
 
   const categories = useMemo(() => {
@@ -384,11 +432,12 @@ function InventoryBody() {
       if (filter === "arch" ? !archived : archived) return false;
       if (filter === "low" && stockStatus(r) !== "low") return false;
       if (filter === "out" && stockStatus(r) !== "out") return false;
+      if (filter === "need" && !needsOrdering(r)) return false;
       if (category && r.categoryLabel !== category) return false;
       if (q && !(r.name.toLowerCase().includes(q) || (r.manufacturer ?? "").toLowerCase().includes(q) || r.sku.includes(q))) return false;
       return true;
     });
-  }, [rows, search, filter, category]);
+  }, [rows, search, filter, category, needsOrdering]);
 
   const byCat = useMemo(() => {
     const m = new Map<string, InventoryRow[]>();
@@ -399,7 +448,8 @@ function InventoryBody() {
     return m;
   }, [filtered]);
 
-  const lowSkusNotInOrder = useMemo(() => live.filter((r) => stockStatus(r) !== "ok" && !cart[r.sku]).map((r) => r.sku), [live, cart]);
+  const lowSkusNotInOrder = useMemo(() => live.filter(needsOrdering).map((r) => r.sku), [live, needsOrdering]);
+  const lowAlreadyOrdered = useMemo(() => live.filter((r) => stockStatus(r) !== "ok" && !cart[r.sku] && recent[r.sku]).length, [live, cart, recent]);
 
   const bySku = useMemo(() => new Map(rows.map((r) => [r.sku, r])), [rows]);
 
@@ -415,6 +465,7 @@ function InventoryBody() {
     { id: "all", label: "All items", n: counts.all },
     { id: "low", label: "Running low", n: counts.low, tone: "warn" },
     { id: "out", label: "Out of stock", n: counts.out, tone: "danger" },
+    { id: "need", label: "Needs ordering", n: counts.need, tone: "warn" },
     ...(isAdmin ? [{ id: "arch" as const, label: "Archived", n: counts.arch }] : []),
   ];
 
@@ -518,6 +569,11 @@ function InventoryBody() {
               <ShoppingCart size={16} />
               Add all {lowSkusNotInOrder.length} low-stock item{lowSkusNotInOrder.length === 1 ? "" : "s"} to order
             </button>
+          )}
+          {lowAlreadyOrdered > 0 && (
+            <p className="basis-full text-xs" style={{ color: BRAND.muted }}>
+              {lowAlreadyOrdered} low or out-of-stock item{lowAlreadyOrdered === 1 ? " was" : "s were"} ordered in the last {RECENT_DAYS} days and {lowAlreadyOrdered === 1 ? "is" : "are"} left out of "Add all". Add them one by one if you need more.
+            </p>
           )}
         </div>
 

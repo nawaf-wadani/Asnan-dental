@@ -447,3 +447,28 @@ export async function listAudit(limit: number, offset: number) {
   }>`SELECT id, at, actor_email, action, entity, entity_id, detail
      FROM audit_log ORDER BY at DESC LIMIT ${limit} OFFSET ${offset}`;
 }
+
+/** The most recent order line for each item ordered in the last `days` days. */
+export async function recentlyOrdered(days: number): Promise<
+  { sku: string; qty: number; orderId: number; createdAt: string; assistantName: string }[]
+> {
+  const rows = await sql<{
+    sku: string;
+    qty: number;
+    order_id: number;
+    created_at: string;
+    assistant_name: string;
+  }>`
+    SELECT DISTINCT ON (oi.sku) oi.sku, oi.qty, o.id AS order_id, o.created_at, o.assistant_name
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE o.created_at > NOW() - make_interval(days => ${days})
+    ORDER BY oi.sku, o.created_at DESC`;
+  return rows.map((r) => ({
+    sku: r.sku,
+    qty: r.qty,
+    orderId: r.order_id,
+    createdAt: iso(r.created_at),
+    assistantName: r.assistant_name,
+  }));
+}
