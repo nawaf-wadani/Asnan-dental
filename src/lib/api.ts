@@ -194,3 +194,15 @@ export const recentApi = {
   /** The latest order line for every item ordered in the last `days` days. */
   items: (days = 14) => request<{ days: number; items: RecentItem[] }>(`/api/recent-items?days=${days}`),
 };
+
+// ---- receiving ----
+import type { ReceivingOrder } from "@shared/types";
+export const receivingApi = {
+  list: () => request<{ orders: ReceivingOrder[] }>("/api/receiving"),
+  /** Mark units as received (adds them to stock). A negative qty undoes a receipt. */
+  receive: (orderId: number, items: { lineId: number; qty: number }[]) =>
+    request<{ order: ReceivingOrder; stock: Record<string, number> }>("/api/receiving", {
+      method: "POST",
+      body: JSON.stringify({ orderId, items }),
+    }),
+};

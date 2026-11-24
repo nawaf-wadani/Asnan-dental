@@ -121,3 +121,18 @@ export type CatalogUpdateInput = z.infer<typeof catalogUpdateSchema>;
 export type InventoryAdjustInput = z.infer<typeof inventoryAdjustSchema>;
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>;
 export type EndoOrderInput = z.infer<typeof endoOrderSchema>;
+
+export const receiveSchema = z.object({
+  orderId: z.number().int().positive(),
+  items: z
+    .array(
+      z.object({
+        lineId: z.number().int().positive(),
+        /** Units that arrived. A negative number undoes a mistake. */
+        qty: z.number().int().min(-9999).max(9999).refine((n) => n !== 0, { message: "Quantity can't be zero" }),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+export type ReceiveInput = z.infer<typeof receiveSchema>;

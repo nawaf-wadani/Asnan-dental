@@ -89,3 +89,26 @@ export interface ApiError {
   error: string;
   details?: unknown;
 }
+
+export interface ReceivingLine {
+  id: number;
+  sku: string;
+  name: string;
+  manufacturer: string | null;
+  photoUrl: string | null;
+  qty: number;
+  receivedQty: number;
+  receivedAt: string | null;
+  receivedBy: string | null;
+}
+
+export interface ReceivingOrder {
+  id: number;
+  createdAt: string;
+  orderDate: string;
+  assistantName: string;
+  createdByEmail: string;
+  urgency: string;
+  status: "open" | "partial" | "received";
+  lines: ReceivingLine[];
+}

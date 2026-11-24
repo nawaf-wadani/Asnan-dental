@@ -1,8 +1,11 @@
-import { sql, queryRaw, withTransaction } from "./db";
+import { sql, queryRaw, withTransaction, pq } from "./db";
+import { HttpError } from "./http";
 import type {
   CatalogItem,
   Order,
   OrderSummary,
+  ReceivingLine,
+  ReceivingOrder,
   Role,
   User,
 } from "../../shared/types";
@@ -448,7 +451,8 @@ export async function listAudit(limit: number, offset: number) {
      FROM audit_log ORDER BY at DESC LIMIT ${limit} OFFSET ${offset}`;
 }
 
-/** The most recent order line for each item ordered in the last `days` days. */
+/** The most recent order line for each item ordered in the last `days` days that has not fully arrived.
+ *  `qty` is how many are still on their way. */
 export async function recentlyOrdered(days: number): Promise<
   { sku: string; qty: number; orderId: number; createdAt: string; assistantName: string }[]
 > {
@@ -459,10 +463,11 @@ export async function recentlyOrdered(days: number): Promise<
     created_at: string;
     assistant_name: string;
   }>`
-    SELECT DISTINCT ON (oi.sku) oi.sku, oi.qty, o.id AS order_id, o.created_at, o.assistant_name
+    SELECT DISTINCT ON (oi.sku) oi.sku, (oi.qty - oi.received_qty) AS qty, o.id AS order_id, o.created_at, o.assistant_name
     FROM order_items oi
     JOIN orders o ON o.id = oi.order_id
     WHERE o.created_at > NOW() - make_interval(days => ${days})
+      AND oi.received_qty < oi.qty
     ORDER BY oi.sku, o.created_at DESC`;
   return rows.map((r) => ({
     sku: r.sku,
@@ -471,4 +476,142 @@ export async function recentlyOrdered(days: number): Promise<
     createdAt: iso(r.created_at),
     assistantName: r.assistant_name,
   }));
+}
+
+// ---------------------------------------------------------------- receiving ---
+
+interface ReceivingOrderRow {
+  id: number;
+  created_at: string;
+  order_date: string;
+  assistant_name: string;
+  created_by_email: string;
+  urgency: string;
+}
+
+interface ReceivingLineRow {
+  id: number;
+  order_id: number;
+  sku: string;
+  name: string;
+  manufacturer: string | null;
+  photo_url: string | null;
+  qty: number;
+  received_qty: number;
+  received_at: string | null;
+  received_by: string | null;
+}
+
+function orderStatus(lines: ReceivingLine[]): ReceivingOrder["status"] {
+  const got = lines.reduce((s, l) => s + l.receivedQty, 0);
+  if (lines.length > 0 && lines.every((l) => l.receivedQty >= l.qty)) return "received";
+  return got > 0 ? "partial" : "open";
+}
+
+async function buildReceivingOrders(orders: ReceivingOrderRow[]): Promise<ReceivingOrder[]> {
+  if (orders.length === 0) return [];
+  const lineRows = await pq<ReceivingLineRow>(
+    `SELECT i.id, i.order_id, i.sku, i.name, i.manufacturer, c.photo_url, i.qty, i.received_qty, i.received_at, i.received_by
+       FROM order_items i
+       LEFT JOIN catalog_items c ON c.sku = i.sku
+      WHERE i.order_id = ANY($1)
+      ORDER BY i.order_id, i.id`,
+    [orders.map((o) => o.id)],
+  );
+  const byOrder = new Map<number, ReceivingLine[]>();
+  for (const l of lineRows) {
+    const list = byOrder.get(l.order_id) ?? [];
+    list.push({
+      id: l.id,
+      sku: l.sku,
+      name: l.name,
+      manufacturer: l.manufacturer,
+      photoUrl: l.photo_url,
+      qty: l.qty,
+      receivedQty: l.received_qty,
+      receivedAt: l.received_at ? iso(l.received_at) : null,
+      receivedBy: l.received_by,
+    });
+    byOrder.set(l.order_id, list);
+  }
+  return orders.map((o) => {
+    const lines = byOrder.get(o.id) ?? [];
+    return {
+      id: o.id,
+      createdAt: iso(o.created_at),
+      orderDate: typeof o.order_date === "string" ? o.order_date : new Date(o.order_date).toISOString().slice(0, 10),
+      assistantName: o.assistant_name,
+      createdByEmail: o.created_by_email,
+      urgency: o.urgency,
+      status: orderStatus(lines),
+      lines,
+    };
+  });
+}
+
+/** Orders still to receive (any age) plus orders fully received in the last 30 days. */
+export async function listReceiving(): Promise<ReceivingOrder[]> {
+  const orders = await pq<ReceivingOrderRow>(
+    `SELECT o.id, o.created_at, o.order_date, o.assistant_name, o.created_by_email, o.urgency
+       FROM orders o
+      WHERE EXISTS (SELECT 1 FROM order_items i WHERE i.order_id = o.id)
+        AND (o.received_at IS NULL OR o.received_at > NOW() - INTERVAL '30 days')
+      ORDER BY o.created_at DESC
+      LIMIT 80`,
+  );
+  return buildReceivingOrders(orders);
+}
+
+export async function getReceivingOrder(orderId: number): Promise<ReceivingOrder | null> {
+  const orders = await pq<ReceivingOrderRow>(
+    `SELECT id, created_at, order_date, assistant_name, created_by_email, urgency FROM orders WHERE id = $1`,
+    [orderId],
+  );
+  return (await buildReceivingOrders(orders))[0] ?? null;
+}
+
+/**
+ * Adds received units to stock. Each item's `qty` is clamped so a line can never be
+ * received beyond what was ordered, and a negative `qty` undoes an earlier receipt.
+ * Returns the new on-hand count for every item whose stock changed.
+ */
+export async function applyReceipt(
+  user: { email: string },
+  orderId: number,
+  items: { lineId: number; qty: number }[],
+): Promise<Record<string, number>> {
+  return withTransaction(async (q) => {
+    const { rows: lines } = await q(
+      `SELECT id, sku, qty, received_qty FROM order_items WHERE order_id = $1 FOR UPDATE`,
+      [orderId],
+    );
+    if (lines.length === 0) throw new HttpError(404, "Order not found");
+    const byId = new Map<number, { id: number; sku: string; qty: number; received_qty: number }>(lines.map((l: any) => [l.id, l]));
+
+    const stock: Record<string, number> = {};
+    for (const it of items) {
+      const line = byId.get(it.lineId);
+      if (!line) throw new HttpError(400, "One of those items is not part of this order");
+      const delta = Math.max(-line.received_qty, Math.min(it.qty, line.qty - line.received_qty));
+      if (delta === 0) continue;
+      line.received_qty += delta;
+      await q(
+        `UPDATE order_items
+            SET received_qty = $1,
+                received_at = CASE WHEN $1 > 0 THEN NOW() ELSE NULL END,
+                received_by = CASE WHEN $1 > 0 THEN $2 ELSE NULL END
+          WHERE id = $3`,
+        [line.received_qty, user.email, line.id],
+      );
+      const { rows: upd } = await q(
+        `UPDATE catalog_items SET on_hand = GREATEST(0, on_hand + $1), updated_at = NOW() WHERE sku = $2 RETURNING sku, on_hand`,
+        [delta, line.sku],
+      );
+      if (upd[0]) stock[upd[0].sku as string] = upd[0].on_hand as number;
+    }
+
+    const allDone = [...byId.values()].every((l) => l.received_qty >= l.qty);
+    await q(`UPDATE orders SET received_at = CASE WHEN $1::boolean THEN COALESCE(received_at, NOW()) ELSE NULL END WHERE id = $2`, [allDone, orderId]);
+    return stock;
+  });
 }

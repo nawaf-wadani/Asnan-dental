@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ShoppingCart,
   ArrowRight,
+  PackageCheck,
   X,
 } from "lucide-react";
 import { inventoryApi, catalogApi, recentApi, ApiError, type InventoryRow, type RecentItem } from "@/lib/api";
@@ -23,6 +24,7 @@ import { useDarkMode } from "@/lib/useDarkMode";
 import { AppShell } from "@/components/AppShell";
 import { useToast } from "@/components/ui/toast";
 import { ItemPhoto } from "@/components/ui/ItemPhoto";
+import { ReceivingView } from "@/components/inventory/ReceivingView";
 import { GlassCard, QtyControl, Spinner } from "@/components/ui/primitives";
 
 export default function InventoryManager() {
@@ -312,14 +314,28 @@ function InventoryBody() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const [recent, setRecent] = useState<Record<string, RecentItem>>({});
+  const [view, setView] = useState<"stock" | "orders">("stock");
 
-  useEffect(() => {
-    // Which items were ordered lately. Not essential, so a failure just hides the badges.
+  const loadRecent = useCallback(() => {
+    // Items still on their way. Not essential, so a failure just hides the badges.
     recentApi
       .items(RECENT_DAYS)
       .then((r) => setRecent(Object.fromEntries(r.items.map((i) => [i.sku, i]))))
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    loadRecent();
+  }, [loadRecent]);
+
+  /** Called after items are marked received: show the new stock counts and refresh what is still on order. */
+  const applyStock = useCallback(
+    (stock: Record<string, number>) => {
+      setRows((rs) => rs.map((r) => (stock[r.sku] != null ? { ...r, onHand: stock[r.sku] } : r)));
+      loadRecent();
+    },
+    [loadRecent],
+  );
 
   useEffect(() => {
     inventoryApi
@@ -488,6 +504,34 @@ function InventoryBody() {
     );
 
   return (
+    <div className="space-y-4">
+      <div className="flex gap-2" role="tablist" aria-label="Inventory views">
+        {(
+          [
+            { id: "stock", label: "Stock", icon: Package },
+            { id: "orders", label: "Order history", icon: PackageCheck },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={view === t.id}
+            onClick={() => setView(t.id)}
+            className="h-11 px-5 rounded-full text-sm font-semibold flex items-center gap-2 transition-apple"
+            style={{
+              background: view === t.id ? BRAND.primaryDark : BRAND.surfaceSolid,
+              color: view === t.id ? "#fff" : BRAND.ink,
+              border: `1px solid ${view === t.id ? BRAND.primaryDark : BRAND.borderSolid}`,
+            }}
+          >
+            <t.icon size={16} /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {view === "orders" ? (
+        <ReceivingView BRAND={BRAND} onStock={applyStock} />
+      ) : (
     <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[208px_minmax(0,1fr)_300px] 2xl:grid-cols-[232px_minmax(0,1fr)_340px] xl:gap-6 xl:items-start">
       {/* ---------- Left: filters (wide screens) ---------- */}
       <aside className="hidden xl:block sticky top-[84px] space-y-6" aria-label="Filters">
@@ -767,6 +811,8 @@ function InventoryBody() {
             </Link>
           </div>
         </div>
+      )}
+    </div>
       )}
     </div>
   );

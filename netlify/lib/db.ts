@@ -89,3 +89,9 @@ export async function seedCatalogIfEmpty(): Promise<void> {
   });
   _seeded = true;
 }
+
+/** One-off query on the connection pool. Supports array parameters (e.g. `= ANY($1)`). */
+export async function pq<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
+  const res = await getDb().pool.query(text, params);
+  return res.rows as T[];
+}
