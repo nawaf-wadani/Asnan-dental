@@ -173,3 +173,12 @@ export const photosApi = {
       body: JSON.stringify({ skus }),
     }),
 };
+
+export const photosFromPageApi = {
+  /** Reads a product page (or a direct picture link) on any website and returns the picture to use. */
+  fromPage: (url: string) =>
+    request<{ imageUrl: string; title: string | null }>("/api/photos/from-page", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+};

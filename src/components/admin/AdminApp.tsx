@@ -11,6 +11,7 @@ import {
   usersApi,
   statsApi,
   photosApi,
+  photosFromPageApi,
   ApiError,
   type AuditEntry,
   type DashboardStats,
@@ -329,6 +330,23 @@ function CatalogEditor({
   const [busy, setBusy] = useState(false);
   const [photo, setPhoto] = useState<string | null>(item?.photoUrl ?? null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [link, setLink] = useState("");
+  const [getting, setGetting] = useState(false);
+
+  const getPhoto = async () => {
+    const url = link.trim();
+    if (!url) return;
+    setGetting(true);
+    try {
+      const r = await photosFromPageApi.fromPage(url);
+      setPhoto(r.imageUrl);
+      toast("Photo found. Check the preview, then save.", "success");
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Could not get a photo from that link", "error");
+    } finally {
+      setGetting(false);
+    }
+  };
 
   const upload = async (file?: File) => {
     if (!file) return;
@@ -408,13 +426,39 @@ function CatalogEditor({
             <div className="text-sm font-medium" style={{ color: BRAND.ink }}>
               Photo
             </div>
-            <TextInput
-              BRAND={BRAND}
-              placeholder="Paste a picture link"
-              aria-label="Picture link"
-              value={photo && !photo.startsWith("data:") ? photo : ""}
-              onChange={(e) => setPhoto(e.target.value.trim() || null)}
-            />
+            <div className="flex gap-2">
+              <TextInput
+                BRAND={BRAND}
+                placeholder="Link to a product page or picture, from any website"
+                aria-label="Link to a product page or picture"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void getPhoto();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={getting || !link.trim()}
+                onClick={() => void getPhoto()}
+                className="h-11 px-4 rounded-xl text-sm font-semibold text-white disabled:opacity-40 whitespace-nowrap"
+                style={{ background: BRAND.primaryDark }}
+              >
+                {getting ? "Getting…" : "Get photo"}
+              </button>
+            </div>
+            <a
+              href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(f.name || "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs underline"
+              style={{ color: BRAND.primaryDark }}
+            >
+              Search the web for this item
+            </a>
             <div className="flex gap-2 flex-wrap">
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
               <button

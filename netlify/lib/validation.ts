@@ -53,6 +53,10 @@ export const photoLookupSchema = z.object({
   skus: z.array(z.string().trim().min(1).max(64)).min(1).max(25),
 });
 
+export const photoFromPageSchema = z.object({
+  url: z.string().trim().url().max(2000),
+});
+
 export const inventoryAdjustSchema = z
   .object({
     sku: z.string().trim().min(1).max(64),
