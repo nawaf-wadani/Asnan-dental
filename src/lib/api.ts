@@ -209,3 +209,9 @@ export const receivingApi = {
       body: JSON.stringify({ orderId, items }),
     }),
 };
+
+export const receivingAdminApi = {
+  /** Admin: take one item out of an order. Stock is not changed. */
+  removeLine: (lineId: number) =>
+    request<{ order: ReceivingOrder | null }>(`/api/receiving?lineId=${lineId}`, { method: "DELETE" }),
+};

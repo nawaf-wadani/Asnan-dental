@@ -627,3 +627,29 @@ export async function deleteAllButLatestOrder(): Promise<{ deleted: number; kept
   const [kept] = await sql<{ id: number }>`SELECT id FROM orders ORDER BY created_at DESC, id DESC LIMIT 1`;
   return { deleted: deleted.length, keptId: kept?.id ?? null };
 }
+
+/**
+ * Removes one item line from an order (admin tool for things that were added by mistake or
+ * will not be delivered). Stock is not touched: units already received stay counted until
+ * someone presses Undo. Keeps the order's totals and "fully received" flag correct.
+ */
+export async function removeOrderLine(
+  lineId: number,
+): Promise<{ orderId: number; name: string; qty: number; receivedQty: number } | null> {
+  return withTransaction(async (q) => {
+    const { rows } = await q(
+      `DELETE FROM order_items WHERE id = $1 RETURNING order_id, name, qty, received_qty`,
+      [lineId],
+    );
+    const l = rows[0];
+    if (!l) return null;
+    await q(`UPDATE orders SET item_count = GREATEST(0, item_count - $1) WHERE id = $2`, [l.qty, l.order_id]);
+    const { rows: left } = await q(`SELECT qty, received_qty FROM order_items WHERE order_id = $1`, [l.order_id]);
+    const allDone = left.length > 0 && left.every((x: { qty: number; received_qty: number }) => x.received_qty >= x.qty);
+    await q(
+      `UPDATE orders SET received_at = CASE WHEN $1::boolean THEN COALESCE(received_at, NOW()) ELSE NULL END WHERE id = $2`,
+      [allDone, l.order_id],
+    );
+    return { orderId: l.order_id as number, name: l.name as string, qty: l.qty as number, receivedQty: l.received_qty as number };
+  });
+}

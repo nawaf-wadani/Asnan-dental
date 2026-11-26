@@ -530,7 +530,7 @@ function InventoryBody() {
       </div>
 
       {view === "orders" ? (
-        <ReceivingView BRAND={BRAND} onStock={applyStock} />
+        <ReceivingView BRAND={BRAND} onStock={applyStock} isAdmin={isAdmin} />
       ) : (
     <div className="space-y-4 xl:space-y-0 xl:grid xl:grid-cols-[208px_minmax(0,1fr)_300px] 2xl:grid-cols-[232px_minmax(0,1fr)_340px] xl:gap-6 xl:items-start">
       {/* ---------- Left: filters (wide screens) ---------- */}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, ChevronUp, PackageCheck, Undo2 } from "lucide-react";
-import type { ReceivingOrder } from "@shared/types";
-import { receivingApi, ApiError } from "@/lib/api";
+import { Check, ChevronDown, ChevronUp, PackageCheck, Trash2, Undo2 } from "lucide-react";
+import type { ReceivingLine, ReceivingOrder } from "@shared/types";
+import { receivingApi, receivingAdminApi, ApiError } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import type { BrandPalette } from "@/lib/brand";
 import { useToast } from "@/components/ui/toast";
@@ -15,7 +15,15 @@ function remainingOf(o: ReceivingOrder): number {
 }
 
 /** Order history with a "Received" button on every line. Receiving adds the units to stock. */
-export function ReceivingView({ BRAND, onStock }: { BRAND: BrandPalette; onStock: (stock: Record<string, number>) => void }) {
+export function ReceivingView({
+  BRAND,
+  onStock,
+  isAdmin = false,
+}: {
+  BRAND: BrandPalette;
+  onStock: (stock: Record<string, number>) => void;
+  isAdmin?: boolean;
+}) {
   const toast = useToast();
   const [orders, setOrders] = useState<ReceivingOrder[] | null>(null);
   const [view, setView] = useState<View>("todo");
@@ -47,6 +55,33 @@ export function ReceivingView({ BRAND, onStock }: { BRAND: BrandPalette; onStock
       }
     },
     [onStock, toast],
+  );
+
+  /** Admin: take an item off an order (added by mistake, or it will not be delivered). */
+  const removeLine = useCallback(
+    async (order: ReceivingOrder, line: ReceivingLine) => {
+      const extra =
+        line.receivedQty > 0
+          ? `\n\n${line.receivedQty} already received stay in your stock. Press Undo first if you want them taken out.`
+          : "";
+      if (!window.confirm(`Remove "${line.name}" (ordered ${line.qty}) from order #${order.id}?${extra}`)) return;
+      setBusy(`remove:${line.id}`);
+      try {
+        const r = await receivingAdminApi.removeLine(line.id);
+        setOrders((os) => {
+          if (!os) return os;
+          const updated = r.order;
+          if (!updated || updated.lines.length === 0) return os.filter((o) => o.id !== order.id);
+          return os.map((o) => (o.id === updated.id ? updated : o));
+        });
+        toast(`"${line.name}" removed from order #${order.id}`, "success");
+      } catch (e) {
+        toast(e instanceof ApiError ? e.message : "Could not remove that item", "error");
+      } finally {
+        setBusy("");
+      }
+    },
+    [toast],
   );
 
   const shown = useMemo(() => {
@@ -224,6 +259,19 @@ export function ReceivingView({ BRAND, onStock }: { BRAND: BrandPalette; onStock
                           title="Undo this receipt"
                         >
                           <Undo2 size={13} /> Undo
+                        </button>
+                      )}
+
+                      {isAdmin && (
+                        <button
+                          disabled={busy !== ""}
+                          onClick={() => void removeLine(o, l)}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center disabled:opacity-50"
+                          style={{ color: BRAND.danger }}
+                          aria-label={`Remove ${l.name} from order ${o.id}`}
+                          title="Remove this item from the order"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </li>

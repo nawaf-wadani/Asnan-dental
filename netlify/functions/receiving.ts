@@ -1,9 +1,9 @@
 import type { Config } from "@netlify/functions";
 import { withErrors } from "../lib/handler";
 import { json, readJson, methodNotAllowed, HttpError } from "../lib/http";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireAdmin } from "../lib/auth";
 import { receiveSchema } from "../lib/validation";
-import { listReceiving, getReceivingOrder, applyReceipt } from "../lib/repos";
+import { listReceiving, getReceivingOrder, applyReceipt, removeOrderLine } from "../lib/repos";
 import { audit } from "../lib/audit";
 
 /**
@@ -28,7 +28,22 @@ export default withErrors(async (req) => {
     return json({ order, stock });
   }
 
-  return methodNotAllowed(["GET", "POST"]);
+  // DELETE /api/receiving?lineId=N  (admin): take one item out of an order.
+  if (req.method === "DELETE") {
+    const admin = await requireAdmin(req);
+    const lineId = Number(new URL(req.url).searchParams.get("lineId"));
+    if (!Number.isInteger(lineId) || lineId <= 0) throw new HttpError(400, "Say which item to remove");
+    const removed = await removeOrderLine(lineId);
+    if (!removed) throw new HttpError(404, "That item is no longer on the order");
+    await audit(admin, "order.line.remove", "order", removed.orderId, {
+      item: removed.name,
+      qty: removed.qty,
+      alreadyReceived: removed.receivedQty,
+    });
+    return json({ order: await getReceivingOrder(removed.orderId) });
+  }
+
+  return methodNotAllowed(["GET", "POST", "DELETE"]);
 });
 
 export const config: Config = {
