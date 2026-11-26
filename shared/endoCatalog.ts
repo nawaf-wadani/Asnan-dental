@@ -19,34 +19,55 @@ export interface EndoOption {
   lengths?: number[];
   /** Extra plain-language detail, e.g. "20 / .07 taper". */
   detail?: string;
+  /** Explicit supplier item number for each length (used instead of code + length). */
+  codes?: Record<number, string>;
+  /** Manufacturer item number for each length, shown next to the supplier number. */
+  mfr?: Record<number, string>;
+  /** Photo of just this option (same formats as EndoProduct.image). */
+  image?: string;
 }
 
 export interface EndoProduct {
   id: string;
   name: string;
   family: string;
-  /** Scene7 image name on Dentsply Sirona's image server. */
+  /**
+   * Photo. A bare name is a Scene7 image on Dentsply Sirona's server; "pd:<file>" is a
+   * Patterson Dental product photo (content.pattersondental.com).
+   */
   image: string;
   /** Product page path on dentsplysirona.com (en-ca shop). */
   path: string;
+  /** Full link to the product on the supplier's own website (overrides `path`). */
+  pageUrl?: string;
+  /** Who sells it, when it is not Dentsply Sirona. */
+  supplier?: string;
+  /** The practice's main file system: shown first, with a quick-order grid. */
+  main?: boolean;
   note?: string;
   options: EndoOption[];
 }
 
-export const ENDO_FAMILIES = ["All", "WaveOne Gold", "ProTaper", "Reciproc", "TruNatomy & TruShape", "Vortex", "ProFile"] as const;
+export const ENDO_FAMILIES = ["All", "VaryFlex", "WaveOne Gold", "ProTaper", "Reciproc", "TruNatomy & TruShape", "Vortex", "ProFile"] as const;
 export type EndoFamily = (typeof ENDO_FAMILIES)[number];
 
 export function endoImageUrl(image: string, width = 480): string {
+  if (image.startsWith("pd:")) {
+    const size = width > 400 ? "LargeSquare" : width > 200 ? "MediumSquare" : "SmallSquare";
+    return `https://content.pattersondental.com/${size}/images/${image.slice(3)}.jpg`;
+  }
   return `https://s7d1.scene7.com/is/image/dentsply/${image}?wid=${width}&qlt=75`;
 }
 
-export function endoProductUrl(path: string): string {
-  return `https://www.dentsplysirona.com/en-ca/shop/product-page.html/${path}`;
+export function endoProductUrl(product: Pick<EndoProduct, "path" | "pageUrl">): string {
+  return product.pageUrl ?? `https://www.dentsplysirona.com/en-ca/shop/product-page.html/${product.path}`;
 }
 
 /** The orderable Dentsply item code for an option at a given length. */
 export function endoItemCode(option: EndoOption, length?: number): string {
   if (length == null) return option.code;
+  const explicit = option.codes?.[length];
+  if (explicit) return explicit;
   return option.code.includes("{L}") ? option.code.replace("{L}", String(length)) : `${option.code}${length}`;
 }
 
@@ -106,7 +127,41 @@ function profileGtOptions(): EndoOption[] {
 
 // ---- catalogue ----------------------------------------------------------------
 
+// ---- Endoperfection VaryFlex VFO One (Patterson Dental) — the main file system ----
+
+const VARYFLEX_LENGTHS = [21, 25, 31];
+/** [label, detail, photo, Patterson item numbers by length, manufacturer numbers by length] */
+const VARYFLEX_ROWS: [string, string, string, number[], string[]][] = [
+  ["Small", "20 / .07", "pd:JPG_1113634", [71425701, 71425743, 71425784], ["VFO2120", "VFO2520", "VFO3120"]],
+  ["Primary", "25 / .07 — most canals", "pd:JPG_1083186", [71425719, 71425750, 71425792], ["VFO2125", "VFO2525", "VFO3125"]],
+  ["Medium", "35 / .06", "pd:JPG_1083188", [71425727, 71425768, 71425800], ["VFO2135", "VFO2535", "VFO3135"]],
+  ["Large", "45 / .05", "pd:JPG_1083187", [71425735, 71425776, 71425818], ["VFO2145", "VFO2545", "VFO3145"]],
+  ["Assorted", "20 / .07 to 45 / .05", "pd:JPG_1116464", [71485184, 71485192, 71485200], ["VFOASM21", "VFOASM25", "VFOASM31"]],
+];
+
+const VARYFLEX: EndoProduct = {
+  id: "varyflex-vfo-one",
+  name: "Endoperfection VaryFlex VFO One",
+  family: "VaryFlex",
+  image: "pd:JPG_1116464",
+  path: "",
+  pageUrl: "https://www.pattersondental.com/Supplies/ItemDetail/071425701",
+  supplier: "Patterson Dental",
+  main: true,
+  note: "Variable-taper rotary / reciprocating files, 6 per package. Item numbers are Patterson Dental's.",
+  options: VARYFLEX_ROWS.map(([label, detail, image, items, mfr]) => ({
+    label,
+    detail,
+    image,
+    code: `VFO-${label.toUpperCase()}`,
+    lengths: VARYFLEX_LENGTHS,
+    codes: Object.fromEntries(VARYFLEX_LENGTHS.map((len, i) => [len, String(items[i])])),
+    mfr: Object.fromEntries(VARYFLEX_LENGTHS.map((len, i) => [len, mfr[i]])),
+  })),
+};
+
 export const ENDO_PRODUCTS: EndoProduct[] = [
+  VARYFLEX,
   {
     id: "waveone-gold",
     name: "WaveOne Gold Reciprocating Files",
@@ -400,6 +455,13 @@ export interface EndoVariantRef {
   product: EndoProduct;
   option: EndoOption;
   length?: number;
+  /** Manufacturer item number, when the supplier's number differs. */
+  mfr?: string;
+}
+
+/** What goes on the order PDF/email as the item code, e.g. "71425701 (VFO2120)". */
+export function endoOrderCode(ref: EndoVariantRef): string {
+  return ref.mfr ? `${ref.code} (${ref.mfr})` : ref.code;
 }
 
 export const ENDO_INDEX: Map<string, EndoVariantRef> = (() => {
@@ -409,7 +471,7 @@ export const ENDO_INDEX: Map<string, EndoVariantRef> = (() => {
       if (option.lengths && option.lengths.length) {
         for (const length of option.lengths) {
           const code = endoItemCode(option, length);
-          m.set(code, { code, product, option, length });
+          m.set(code, { code, product, option, length, mfr: option.mfr?.[length] });
         }
       } else {
         const code = endoItemCode(option);

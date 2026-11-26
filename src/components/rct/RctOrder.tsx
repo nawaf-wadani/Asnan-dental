@@ -7,6 +7,7 @@ import {
   ENDO_PRODUCTS,
   endoImageUrl,
   endoItemCode,
+  endoOrderCode,
   endoProductUrl,
   type EndoFamily,
   type EndoOption,
@@ -100,14 +101,23 @@ function RctBody() {
     return m;
   }, [orderLines]);
 
+  const mainProduct = ENDO_PRODUCTS.find((p) => p.main) ?? null;
+  // The main file system has its own quick-order grid at the top; it only drops into the
+  // photo grid when someone is searching for it.
+  const showMain = !!mainProduct && !query.trim() && (family === "All" || family === mainProduct.family);
+
   const products = useMemo(() => {
     const q = query.trim().toLowerCase();
     return ENDO_PRODUCTS.filter((p) => {
+      if (showMain && p.main) return false;
       if (family !== "All" && p.family !== family) return false;
       if (!q) return true;
-      return p.name.toLowerCase().includes(q) || p.options.some((o) => `${o.label} ${o.code}`.toLowerCase().includes(q));
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.options.some((o) => `${o.label} ${o.code} ${Object.values(o.codes ?? {}).join(" ")} ${Object.values(o.mfr ?? {}).join(" ")}`.toLowerCase().includes(q))
+      );
     });
-  }, [family, query]);
+  }, [family, query, showMain]);
 
   const accessories: string[] = [];
   if (paper.type && paper.qty > 0) accessories.push(`Paper Points (${paper.type}) x${paper.qty}`);
@@ -135,7 +145,7 @@ function RctBody() {
           taper: ref.option.label,
           length: ref.length ? `${ref.length} mm` : "—",
           qty,
-          code: ref.code,
+          code: endoOrderCode(ref),
         })),
         accessories,
         notes: notes.trim(),
@@ -278,7 +288,14 @@ function RctBody() {
         </div>
       </div>
 
+      {showMain && mainProduct && <MainFileCard BRAND={BRAND} product={mainProduct} lines={lines} setLine={setLine} />}
+
       {/* Photo grid */}
+      {showMain && products.length > 0 && (
+        <h2 className="text-sm font-semibold pt-1" style={{ color: BRAND.muted }}>
+          Other endo files
+        </h2>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {products.map((p) => {
           const n = qtyByProduct.get(p.id) ?? 0;
@@ -334,7 +351,7 @@ function RctBody() {
             {orderLines.map(({ ref, qty }) => (
               <div key={ref.code} className="p-3 flex items-center gap-3" style={{ borderColor: BRAND.border }}>
                 <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 p-1" style={{ background: "#fff", border: `1px solid ${BRAND.borderSolid}` }}>
-                  <ProductImage image={ref.product.image} alt={ref.product.name} width={160} />
+                  <ProductImage image={ref.option.image ?? ref.product.image} alt={ref.product.name} width={160} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold leading-snug" style={{ color: BRAND.ink }}>
@@ -342,7 +359,7 @@ function RctBody() {
                   </div>
                   <div className="text-xs mt-0.5" style={{ color: BRAND.muted }}>
                     {ref.option.label}
-                    {ref.length ? ` · ${ref.length} mm` : ""} · {ref.code}
+                    {ref.length ? ` · ${ref.length} mm` : ""} · {endoOrderCode(ref)}
                   </div>
                 </div>
                 <QtyControl BRAND={BRAND} qty={qty} onChange={(q) => setLine(ref.code, q)} compact />
@@ -401,7 +418,7 @@ function RctBody() {
           />
         </GlassCard>
         <p className="text-xs" style={{ color: BRAND.muted }}>
-          Product photos and item codes come from the Dentsply Sirona shop. The order PDF is emailed to the clinic and downloaded here.
+          Product photos and item codes come from the Dentsply Sirona shop (VaryFlex: Patterson Dental). The order PDF is emailed to the clinic and downloaded here.
         </p>
       </section>
 
@@ -438,6 +455,127 @@ function RctBody() {
         />
       )}
     </div>
+  );
+}
+
+const MAIN_LENGTHS_HINT = "Tap + to add a package of 6 files";
+
+/** The practice's main file system: one grid, sizes down the side, lengths across the top. */
+function MainFileCard({
+  BRAND,
+  product,
+  lines,
+  setLine,
+}: {
+  BRAND: BrandPalette;
+  product: EndoProduct;
+  lines: Record<string, number>;
+  setLine: (code: string, qty: number) => void;
+}) {
+  const lengths = product.options[0]?.lengths ?? [];
+  const cols = { gridTemplateColumns: `minmax(0,1.5fr) repeat(${lengths.length}, minmax(0,1fr))` } as const;
+  const total = product.options.reduce(
+    (s, o) => s + (o.lengths ?? []).reduce((t, len) => t + (lines[endoItemCode(o, len)] ?? 0), 0),
+    0,
+  );
+
+  return (
+    <section
+      className="rounded-3xl overflow-hidden"
+      style={{ background: BRAND.surfaceSolid, border: `2px solid ${BRAND.primaryDark}`, boxShadow: BRAND.cardShadow }}
+      aria-label={`${product.name}, main endo file`}
+    >
+      <div className="p-4 sm:p-5 flex items-center gap-4" style={{ background: `${BRAND.primary}14` }}>
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl p-1.5 flex-shrink-0" style={{ background: "#fff", border: `1px solid ${BRAND.borderSolid}` }}>
+          <ProductImage image={product.image} alt={product.name} width={320} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-bold tracking-wide uppercase text-white" style={{ background: BRAND.primaryDark }}>
+            Main file
+          </span>
+          <h2 className="text-lg sm:text-xl font-semibold leading-snug mt-1" style={{ color: BRAND.ink }}>
+            {product.name}
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: BRAND.muted }}>
+            Variable taper · 6 files per package · {product.supplier} · {MAIN_LENGTHS_HINT}
+          </p>
+        </div>
+        {total > 0 && (
+          <span className="min-w-[32px] h-8 px-2.5 rounded-full text-sm font-bold text-white flex items-center justify-center" style={{ background: BRAND.primaryDark }} aria-label={`${total} packages in order`}>
+            {total}
+          </span>
+        )}
+      </div>
+
+      <div className="px-3 sm:px-5 pb-4 pt-2">
+        <div className="grid gap-2 items-end py-2 text-xs font-semibold" style={{ ...cols, color: BRAND.muted }}>
+          <span>Size</span>
+          {lengths.map((len) => (
+            <span key={len} className="text-center">
+              {len} mm
+            </span>
+          ))}
+        </div>
+        {product.options.map((o) => (
+          <div key={o.code} className="grid gap-2 items-center py-2" style={{ ...cols, borderTop: `1px solid ${BRAND.border}` }}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-11 h-11 rounded-lg p-0.5 flex-shrink-0" style={{ background: "#fff", border: `1px solid ${BRAND.borderSolid}` }}>
+                <ProductImage image={o.image ?? product.image} alt={`${o.label} files`} width={160} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold leading-tight" style={{ color: BRAND.ink }}>
+                  {o.label}
+                </div>
+                <div className="text-[11px] leading-tight mt-0.5" style={{ color: BRAND.muted }}>
+                  {o.detail}
+                </div>
+              </div>
+            </div>
+            {(o.lengths ?? []).map((len) => {
+              const code = endoItemCode(o, len);
+              const qty = lines[code] ?? 0;
+              return qty > 0 ? (
+                <div
+                  key={code}
+                  className="h-11 rounded-full flex items-center justify-between text-white"
+                  style={{ background: BRAND.primaryDark }}
+                  role="group"
+                  aria-label={`${o.label} ${len} millimetre, quantity ${qty}`}
+                >
+                  <button onClick={() => setLine(code, qty - 1)} className="w-8 sm:w-9 h-11 flex items-center justify-center" aria-label={`Remove one ${o.label} ${len} mm`}>
+                    <Minus size={14} strokeWidth={2.5} />
+                  </button>
+                  <span className="text-sm font-bold">{qty}</span>
+                  <button onClick={() => setLine(code, qty + 1)} className="w-8 sm:w-9 h-11 flex items-center justify-center" aria-label={`Add one ${o.label} ${len} mm`}>
+                    <Plus size={14} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  key={code}
+                  onClick={() => setLine(code, 1)}
+                  className="h-11 rounded-full flex items-center justify-center transition-apple"
+                  style={{ background: BRAND.surfaceSolid, color: BRAND.primaryDark, border: `1.5px solid ${BRAND.borderSolid}` }}
+                  aria-label={`Add ${o.label} ${len} mm`}
+                  title={`${code} (${o.mfr?.[len] ?? ""})`}
+                >
+                  <Plus size={16} strokeWidth={2.5} />
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        <a
+          href={endoProductUrl(product)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium underline"
+          style={{ color: BRAND.primaryDark }}
+        >
+          View on {product.supplier} <ExternalLink size={12} />
+        </a>
+      </div>
+    </section>
   );
 }
 
@@ -503,13 +641,13 @@ function ProductSheet({
       </div>
 
       <a
-        href={endoProductUrl(product.path)}
+        href={endoProductUrl(product)}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium underline"
         style={{ color: BRAND.primaryDark }}
       >
-        View on Dentsply Sirona <ExternalLink size={12} />
+        View on {product.supplier ?? "Dentsply Sirona"} <ExternalLink size={12} />
       </a>
     </ModalShell>
   );

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, ChevronUp, PackageCheck, Trash2, Undo2 } from "lucide-react";
 import type { ReceivingLine, ReceivingOrder } from "@shared/types";
-import { receivingApi, receivingAdminApi, ApiError } from "@/lib/api";
+import { receivingApi, receivingAdminApi, ordersApi, ApiError } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import type { BrandPalette } from "@/lib/brand";
 import { useToast } from "@/components/ui/toast";
@@ -77,6 +77,26 @@ export function ReceivingView({
         toast(`"${line.name}" removed from order #${order.id}`, "success");
       } catch (e) {
         toast(e instanceof ApiError ? e.message : "Could not remove that item", "error");
+      } finally {
+        setBusy("");
+      }
+    },
+    [toast],
+  );
+
+  /** Admin: delete a whole order from the history. Stock already added from it is left alone. */
+  const removeOrder = useCallback(
+    async (order: ReceivingOrder) => {
+      const got = order.lines.reduce((s, l) => s + l.receivedQty, 0);
+      const extra = got > 0 ? `\n\n${got} unit${got === 1 ? "" : "s"} from it were already added to your stock and will stay there.` : "";
+      if (!window.confirm(`Delete order #${order.id} permanently? This cannot be undone.${extra}`)) return;
+      setBusy(`delete:${order.id}`);
+      try {
+        await ordersApi.remove(order.id);
+        setOrders((os) => (os ? os.filter((o) => o.id !== order.id) : os));
+        toast(`Order #${order.id} deleted`, "success");
+      } catch (e) {
+        toast(e instanceof ApiError ? e.message : "Could not delete that order", "error");
       } finally {
         setBusy("");
       }
@@ -193,6 +213,18 @@ export function ReceivingView({
                   style={{ background: BRAND.primaryDark }}
                 >
                   <Check size={16} strokeWidth={2.5} /> {busy === `order:${o.id}` ? "Saving…" : "Receive all"}
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  disabled={busy !== ""}
+                  onClick={() => void removeOrder(o)}
+                  className="h-11 px-3.5 rounded-xl text-sm font-medium flex items-center gap-1.5 disabled:opacity-50"
+                  style={{ color: BRAND.danger, border: `1px solid ${BRAND.borderSolid}` }}
+                  aria-label={`Delete order ${o.id}`}
+                  title="Delete this whole order (admin)"
+                >
+                  <Trash2 size={15} /> {busy === `delete:${o.id}` ? "Deleting…" : "Delete order"}
                 </button>
               )}
             </div>
