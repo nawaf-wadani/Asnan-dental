@@ -64,6 +64,14 @@ export const catalogApi = {
   /** Permanent delete. Past orders keep their own copy of the item. */
   remove: (sku: string) =>
     request<{ ok: true }>(`/api/catalog/${encodeURIComponent(sku)}?hard=1`, { method: "DELETE" }),
+  /** Admin: groups of items that look like the same product entered twice. */
+  duplicates: () => request<{ groups: CatalogItem[][] }>("/api/catalog-duplicates"),
+  /** Admin: keep one item and fold the others into it. The kept item's stock is unchanged. */
+  merge: (keep: string, remove: string[]) =>
+    request<{ ok: true; removed: number; orderLinesMoved: number }>("/api/catalog-duplicates", {
+      method: "POST",
+      body: JSON.stringify({ keep, remove }),
+    }),
 };
 
 // ---- inventory ----

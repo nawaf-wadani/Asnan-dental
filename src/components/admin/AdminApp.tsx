@@ -241,12 +241,40 @@ function CatalogTab({ BRAND }: { BRAND: B }) {
   const [editing, setEditing] = useState<CatalogItem | "new" | null>(null);
   const toast = useToast();
 
-  const load = () =>
+  const [dupes, setDupes] = useState<CatalogItem[][]>([]);
+  const [merging, setMerging] = useState("");
+
+  const load = () => {
     catalogApi
+      .duplicates()
+      .then((r) => setDupes(r.groups))
+      .catch(() => setDupes([]));
+    return catalogApi
       .list(true)
       .then((r) => setItems(r.items))
       .catch((e) => toast(e instanceof ApiError ? e.message : "Failed", "error"))
       .finally(() => setLoading(false));
+  };
+
+  const merge = async (group: CatalogItem[], keep: CatalogItem) => {
+    const others = group.filter((g) => g.sku !== keep.sku);
+    if (
+      !window.confirm(
+        `Keep "${keep.name}" (SKU ${keep.sku}, stock ${keep.onHand}) and remove ${others.length} duplicate${others.length === 1 ? "" : "s"}?\n\nThe stock stays at ${keep.onHand}. Counts are not added together. Past orders move over to the item you keep.`,
+      )
+    )
+      return;
+    setMerging(keep.sku);
+    try {
+      await catalogApi.merge(keep.sku, others.map((o) => o.sku));
+      toast("Duplicates merged", "success");
+    } catch (e) {
+      toast(e instanceof ApiError ? e.message : "Could not merge those items", "error");
+    } finally {
+      setMerging("");
+      void load();
+    }
+  };
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,6 +317,38 @@ function CatalogTab({ BRAND }: { BRAND: B }) {
           <Plus size={15} />
         </Button>
       </div>
+      {dupes.length > 0 && (
+        <GlassCard BRAND={BRAND} className="p-4 space-y-3" style={{ border: `1.5px solid ${BRAND.warning}` }}>
+          <div>
+            <div className="text-sm font-semibold" style={{ color: BRAND.ink }}>
+              {dupes.length} item{dupes.length === 1 ? " is" : "s are"} in the catalog twice
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: BRAND.muted }}>
+              Same name or same item number. Pick the one to keep. The others are removed, the kept item's stock is not changed, and past orders move over to it.
+            </p>
+          </div>
+          {dupes.map((g) => (
+            <div key={g.map((x) => x.sku).join("|")} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${BRAND.borderSolid}` }}>
+              {g.map((it) => (
+                <div key={it.sku} className="p-2.5 flex items-center gap-3 flex-wrap" style={{ borderBottom: `1px solid ${BRAND.border}`, opacity: it.active ? 1 : 0.6 }}>
+                  <ItemPhoto sku={it.sku} photoUrl={it.photoUrl} size={40} />
+                  <div className="flex-1 min-w-[160px]">
+                    <div className="text-sm font-semibold">{it.name}</div>
+                    <div className="text-[11px]" style={{ color: BRAND.muted }}>
+                      SKU {it.sku}
+                      {it.itemNumber ? ` · item # ${it.itemNumber}` : ""} · stock {it.onHand}
+                      {it.active ? "" : " · archived"}
+                    </div>
+                  </div>
+                  <Button BRAND={BRAND} variant="ghost" disabled={!!merging} onClick={() => void merge(g, it)}>
+                    {merging === it.sku ? "Merging…" : "Keep this one"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </GlassCard>
+      )}
       <div className="flex items-center gap-3 flex-wrap pb-1">
         <Button BRAND={BRAND} variant="ghost" disabled={!!finding || lookable.length === 0} onClick={findPhotos}>
           <ImagePlus size={15} /> {finding || `Find missing photos (${lookable.length})`}
@@ -386,7 +446,10 @@ function CatalogEditor({
     const categoryLabel = CATALOG_CATEGORIES.find((c) => c.key === f.category)?.label ?? f.category;
     try {
       if (item) {
-        await catalogApi.update(item.sku, { ...f, categoryLabel, photoUrl: photo });
+        // Leave the stock count out unless it was changed here, so saving a photo or a name
+        // never overwrites units that were received or counted in the meantime.
+        const { onHand, ...rest } = f;
+        await catalogApi.update(item.sku, { ...rest, ...(onHand !== item.onHand ? { onHand } : {}), categoryLabel, photoUrl: photo });
       } else {
         await catalogApi.create({ ...f, categoryLabel, photoUrl: photo });
       }

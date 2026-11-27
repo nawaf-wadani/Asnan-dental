@@ -124,6 +124,93 @@ export async function deleteCatalogItem(sku: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+/** Lower-case, trimmed, single-spaced, so "Gloves  Nitrile M" and "gloves nitrile m" match. */
+function norm(s: string | null | undefined): string {
+  return (s ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export interface DuplicateHit {
+  sku: string;
+  name: string;
+  active: boolean;
+  reason: "sku" | "name" | "itemNumber";
+}
+
+/**
+ * Looks for an existing catalog item (archived ones too) that is the same as a new or
+ * edited one: same SKU (ignoring case), same name, or same supplier item number.
+ */
+export async function findDuplicateItem(
+  candidate: { sku?: string | null; name?: string | null; itemNumber?: string | null },
+  excludeSku?: string,
+): Promise<DuplicateHit | null> {
+  const sku = norm(candidate.sku);
+  const name = norm(candidate.name);
+  const num = norm(candidate.itemNumber);
+  if (!sku && !name && !num) return null;
+  const rows = await sql<CatalogRow>`SELECT * FROM catalog_items`;
+  for (const r of rows) {
+    if (excludeSku && r.sku === excludeSku) continue;
+    const hit = (reason: DuplicateHit["reason"]): DuplicateHit => ({ sku: r.sku, name: r.name, active: r.active, reason });
+    if (sku && norm(r.sku) === sku) return hit("sku");
+    if (name && norm(r.name) === name) return hit("name");
+    if (num && norm(r.item_number) === num) return hit("itemNumber");
+  }
+  return null;
+}
+
+/** Groups of catalog items that look like the same product entered more than once. */
+export async function listDuplicateGroups(): Promise<CatalogItem[][]> {
+  const items = (await sql<CatalogRow>`SELECT * FROM catalog_items ORDER BY sort, name`).map(toCatalogItem);
+  const parent = items.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const seen = new Map<string, number>();
+  items.forEach((it, i) => {
+    for (const key of [`n:${norm(it.name)}`, it.itemNumber ? `i:${norm(it.itemNumber)}` : ""]) {
+      if (!key) continue;
+      const j = seen.get(key);
+      if (j == null) seen.set(key, i);
+      else parent[find(i)] = find(j);
+    }
+  });
+  const groups = new Map<number, CatalogItem[]>();
+  items.forEach((it, i) => {
+    const r = find(i);
+    groups.set(r, [...(groups.get(r) ?? []), it]);
+  });
+  return [...groups.values()].filter((g) => g.length > 1);
+}
+
+/**
+ * Folds duplicate items into one. The kept item's stock count is left exactly as it is
+ * (adding the counts would double what is on the shelf). Photo, item number and other
+ * details missing on the kept item are copied from the duplicates, and order history that
+ * pointed at a duplicate is re-pointed at the kept item.
+ */
+export async function mergeCatalogItems(keepSku: string, removeSkus: string[]): Promise<{ removed: number; orderLinesMoved: number }> {
+  const remove = [...new Set(removeSkus)].filter((s) => s !== keepSku);
+  if (remove.length === 0) throw new HttpError(400, "Pick at least one duplicate to merge");
+  return withTransaction(async (q) => {
+    const { rows } = await q(`SELECT * FROM catalog_items WHERE sku = ANY($1) FOR UPDATE`, [[keepSku, ...remove]]);
+    const byKey = new Map<string, any>(rows.map((r: any) => [r.sku as string, r]));
+    const keeper = byKey.get(keepSku);
+    if (!keeper) throw new HttpError(404, "The item you chose to keep was not found");
+    if (remove.some((s) => !byKey.has(s))) throw new HttpError(404, "One of the duplicates no longer exists. Reload and try again");
+
+    for (const col of ["photo_url", "item_number", "manufacturer", "supplier", "pkg"]) {
+      if (keeper[col]) continue;
+      const donor = remove.map((s) => byKey.get(s)).find((r) => r[col]);
+      if (donor) await q(`UPDATE catalog_items SET ${col} = $1, updated_at = NOW() WHERE sku = $2`, [donor[col], keepSku]);
+    }
+    if (!keeper.active && remove.some((s) => byKey.get(s).active)) {
+      await q(`UPDATE catalog_items SET active = TRUE, updated_at = NOW() WHERE sku = $1`, [keepSku]);
+    }
+    const moved = await q(`UPDATE order_items SET sku = $1 WHERE sku = ANY($2) RETURNING id`, [keepSku, remove]);
+    await q(`DELETE FROM catalog_items WHERE sku = ANY($1)`, [remove]);
+    return { removed: remove.length, orderLinesMoved: moved.rows.length };
+  });
+}
+
 export async function adjustInventory(
   sku: string,
   change: { onHand?: number; reorderThreshold?: number; delta?: number },

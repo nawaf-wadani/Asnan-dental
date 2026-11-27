@@ -10,9 +10,20 @@ import {
   updateCatalogItem,
   setCatalogActive,
   deleteCatalogItem,
+  findDuplicateItem,
+  type DuplicateHit,
 } from "../lib/repos";
 import { audit } from "../lib/audit";
 import { CATALOG_CATEGORIES } from "../../shared/catalog";
+
+function duplicateMessage(d: DuplicateHit): string {
+  const where = `"${d.name}" (SKU ${d.sku}${d.active ? "" : ", archived"})`;
+  return d.reason === "sku"
+    ? `That SKU is already used by ${where}. Edit that item instead of adding it again.`
+    : d.reason === "name"
+      ? `${where} is already in your catalog with this name. Edit that item instead of adding it again.`
+      : `${where} already has this item number. Edit that item instead of adding it again.`;
+}
 
 export default withErrors(async (req, context) => {
   const sku = context.params?.sku;
@@ -27,7 +38,8 @@ export default withErrors(async (req, context) => {
     if (req.method === "POST") {
       const admin = await requireAdmin(req);
       const input = await readJson(req, catalogCreateSchema);
-      if (await getCatalogBySku(input.sku)) throw new HttpError(409, `SKU ${input.sku} already exists`);
+      const dup = await findDuplicateItem(input);
+      if (dup) throw new HttpError(409, duplicateMessage(dup));
       const item = await createCatalogItem(input);
       await audit(admin, "catalog.create", "catalog_item", item.sku, { name: item.name });
       return json({ item }, 201);
@@ -38,6 +50,17 @@ export default withErrors(async (req, context) => {
   if (req.method === "PATCH") {
     const admin = await requireAdmin(req);
     const patch = await readJson(req, catalogUpdateSchema);
+    const current = await getCatalogBySku(sku);
+    if (!current) throw new HttpError(404, "Item not found");
+    // Only look for a twin when the SKU, name or item number is actually being changed, so
+    // an item that already has a twin can still be edited (and then merged).
+    const changed = {
+      sku: patch.sku != null && patch.sku !== current.sku ? patch.sku : null,
+      name: patch.name != null && patch.name !== current.name ? patch.name : null,
+      itemNumber: patch.itemNumber && patch.itemNumber !== current.itemNumber ? patch.itemNumber : null,
+    };
+    const dup = await findDuplicateItem(changed, sku);
+    if (dup) throw new HttpError(409, duplicateMessage(dup));
     const item = await updateCatalogItem(sku, patch);
     if (!item) throw new HttpError(404, "Item not found");
     await audit(admin, "catalog.update", "catalog_item", sku, patch as Record<string, unknown>);

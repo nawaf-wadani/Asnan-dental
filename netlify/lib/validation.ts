@@ -49,6 +49,11 @@ export const catalogUpdateSchema = catalogCreateSchema.partial().refine(
   { message: "No fields to update" },
 );
 
+export const catalogMergeSchema = z.object({
+  keep: z.string().trim().min(1).max(64),
+  remove: z.array(z.string().trim().min(1).max(64)).min(1).max(50),
+});
+
 export const photoLookupSchema = z.object({
   skus: z.array(z.string().trim().min(1).max(64)).min(1).max(25),
 });
